@@ -21,6 +21,12 @@ Le texte est découpé et étiqueté à partir des mots du `bootstrap`. Puis ANA
 
 Puis le système effectue une destruction pour mettre à jour le bootstrap en supprimant les candidats dont la fréquence n'est plus suffisante. Enfin, le système réalise ces étapes de manière itérative jusqu'à atteindre un nombre d'étapes fixé par l'opérateur.
 
+## Requis
+module à installer
+- regex [https://pypi.python.org/pypi/regex]
+- distance [https://pypi.python.org/pypi/Distance/]
+- 
+
 ## Classes
 
 4 classes principales d'objets composent le système ANA.
@@ -58,3 +64,29 @@ La recherche de `Simples` (p.134) consiste à identifier des `terme_quelconque` 
     * si la fenêtre contient le même CAND avec des mot_schema différents, alors le seuil de fréquence est de 5
     * si la fenêtre contient des CAND différents avec le même mot_schema, alors le seuil de fréquence est de 5
     * si la fenêtre contient des CAND différents des mot_schema différents, alors le seuil de fréquence est de 10
+
+
+## Les fichiers utiles: 
+Les fichiers utiles sont: 
+- `texte.txt`: le texte brut à analyser.
+- `stop_list`: contient mot et groupe de mot très fréquente et non porteur de sens 
+- `mots_schema`: contient les quelques forme de construction de mot-clef complexe ("de la", "du", "des", "de")
+- `bootstrap`: contient quelques termes révélateurs du contenu global du texte. Au nombre de 4 environ. Pour amorcer la recherche. Ce sont des mots simples et avec un grand nombre d'occurence.
+- `mots_interdits`: contient les mots qu'on ne veut pas voir apparaitre dans les résultats, mais qui peuvent permettre de contruire d'autres mots interessants (donc ne pas confondre avec la `stop_list`).
+
+## Les fonctions utiles
+Quelques fonctions outils qui seront appelées à divers endroit:
+- `etiquette_texte`: Prend une énorme chaîne de mot (tout le texte), et retourne un énorme dictionnaire. On parlera du dico des étiquettes (numérotées). Une étiquette est composée d'un ou plusieurs mots consécutifs et son type. Il faut consommer tous les mots du texte. Types disponibles pour etiquette: la liste de tous les `CAND`, `mot_stop` (noté `stop`) ou `terme_quelconque` (noté `tq`). 
+ex: 'les plus beaux bâtiments sont construits en béton armé' pourrait devenir `[[`les, `stop], [`plus, `stop], [`beaux, `tq], [`bâtiments, `BÂTIMENT], [`sont, `stop], [`en, `stop], [`béton armé, `BÉTON ARMÉ]]` (si 'béton armé' et 'batiment' sont écrits dans le fichier `bootstrap`).  
+Cette fonction est lancée qu'une seule fois au début de ANA.  
+Attention les indices ne correspondent plus aux indices des mots dans le texte d'origine lorsque des `CAND` composés de plusieurs mots sont captés (ça se décale).
+
+- `egalite_souple_term`: Prend 2 termes et retourne un booléen. Permet de définir si 2 termes sont égaux, en calculant une proximité entre eux. Un seuil de flexibilité est défini. ex: 'bâtiments' et 'batiment' doit retourner VRAI. 
+- `egalite_souple_chaine`: Prend 2 chaînes et retourne un booléen. Permet de définir si 2 chaînes sont égales. Retire les mots de la `stop_list` contenu dans les chaïnes. Calcul la sommes des proximités des paires de mots (chaine A, chaine B contiennent les paires A1 B1; A2 B2; A3 B3). ex: 'bâtiment construit en béton' et 'batiments construits avec du béton' deviennent 'bâtiment construit béton' et 'batiments construits béton'. Alors la fonction doit retourner VRAI. 
+- `inclusion_souple`: Prend 2 chaînes et retourne un booléen. Retire les mots de la `stop_list` contenu dans les chaînes. Vérifie si la chaîne A est «~souplement incluse~» dans la chaîne B. Pour cela il faut trouver un mot dans B souplement égal au premier mot de A. Puis passer au mot suivant pour les deux chaines et vérifier l'égalité souple entre une seconde paire de mot (A2 B2). Ne trouve pas si les mots sont dans un autre ordre. ex: 'beau batiment' et 'les plus beaux bâtiments sont construits en béton' retourne VRAI.
+- `defini_fenetres`: prend les paramètres: le dico des étiquettes, une liste de `CAND`, `W` (taille de la fenetre) et `w` (position du `CAND` dans la fenêtre (1, 2, 3 ou 4 souvent)) et sort une liste de toutes les suites d'étiquettes correspondant aux critères: ce sont les fenêtres. En fonction de la classe la fonction peut prendre une liste de tous les `CAND` en argument (pour `simple`), ou travailler candidat par candidat, donc ne prendre qu'un seul `CAND` en argument (pour `expression` et `expansion`).
+- `change_etiquette`: Prend en argument, le dico des étiquettes, plusieurs indices (consécutifs) dans ce dico et un type, ne retourne rien. Concatène les chaînes de caractères contenues dans ces étiquettes. Modifie la première étiquette de la liste: remplace par la chaîne concaténée précédement et lui attribue le type donné en argument. Supprime les autres étiquettes de la liste.
+Attention les indices dans la liste des étiquettes se décalent à chaque fois (supprime plusieurs item pour n'en insérer qu'un seul). 
+
+
+
