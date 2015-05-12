@@ -52,8 +52,6 @@ def egal_sple_chain(chaine1, chaine2):
             souple = egal_sple_term(mot1, mot2)
     return souple
 
-
-#Prend une énorme chaîne de mot (tout le texte), et retourne un énorme dictionnaire. On parlera du dico des étiquettes (numérotées). Une étiquette est composée d'un ou plusieurs mots consécutifs et son type. Il faut consommer tous les mots du texte. Types disponibles pour etiquette: la liste de tous les `CAND`, `mot_stop` (noté `stop`) ou `terme_quelconque` (noté `tq`). 
 def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
     dico_etiq = {}
     i = 0
@@ -79,11 +77,12 @@ def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
                         egaux = egal_sple_term(cand, motlower)
                         if egaux == True:
                             marked = True
-                            dico_etiq[i] = [mot, mot]
+                            dico_etiq[i] = [mot, cand]
                     if marked == False:
                         dico_etiq[i] = [mot, 't']
             print(dico_etiq)
             return dico_etiq
+
 
 #prend en paramètres: le dico des étiquettes, une liste de `CAND`, `W` (taille de la fenetre) et `w` (position du `CAND` dans la fenêtre (1, 2, 3 ou 4 souvent)) et sort une liste de toutes les suites d'étiquettes numérotées (une fenetre) correspondant aux critères: les fenêtres. Les étiquettes sont de la forme [indice, mot, typemot] dans les fenetres.
 def defini_fenetres(dico, liste_CAND, W, w):
@@ -119,21 +118,44 @@ def defini_fenetres(dico, liste_CAND, W, w):
                 fenetres.append(fenetre)  #met la fenetre dans la liste des fenetres recherchées. 
     return fenetres
 
-
-def change_etiquette(dico, indices, new_cand):
+def change_etiquette(dico, fenetre):
+#def change_etiquette(dico, indices, new_cand):
     new_string_list = []
-    indices = indices.sort() #au cas où
-    new_indice = indices[0]
-    for indice in indices:
-        etiquette = dico[indice]
-        new_string_list.append(etiquette[0])
+    fenetre.sort(key=lambda x: x[0]) #trie les étiquette de la fenetre par ordre d'indice croissant . au cas où
+    
+    etiquette1 = fenetre[0]
+    new_indice = etiquette1[0]
+    
+    for etiquette in fenetre:
+        indice = etiquette[0]
+        to_change = dico[indice]
+        new_string_list.append(to_change[0])
         new_string = ' '.join(new_string_list)
     dico[new_indice] = [new_string, new_cand] # remplace la première étiquette de la fenetre par le new_string et le new_cand
-    for indice in indices[1:]:
+        
+    for etiquette in fenetre[1:]:
+        indice = etiquette[0]
         del dico[indice] # supprime les autres indices dans le dico
-    print('ok')
-    
 
+    
+#prend une fenetre d'étiquette et supprime tout les mots de la stoplist contenu dans cette fenetre. retourne une fenetre_sans_v (sans mots_schema)
+#pas pour opérer mais pour faire des vérification de fenetres valides
+def fenetre_sans_v(fenetre):
+    fenetre_sans_v = []
+    for etiquette in fenetre:
+        if etiquette[2] != 'v':
+            fenetre_sans_v.append(etiquette)
+    return fenetre_sans_v
+
+def symetrique_fenetre(fenetre):
+    new_fenetre = list(reversed(fenetre))
+    return new_fenetre
+
+def est_un_cand(etiquette):
+    if etiquette[2] not in ['t', 'v']:
+        return True
+    else:
+        return False
               
 #test##############################################
 txt_file_path = 'test/txt.txt'

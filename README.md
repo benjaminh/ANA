@@ -25,7 +25,6 @@ Puis le système effectue une destruction pour mettre à jour le bootstrap en su
 module à installer
 - regex [https://pypi.python.org/pypi/regex]
 - distance [https://pypi.python.org/pypi/Distance/]
-- 
 
 ## Classes
 
@@ -37,13 +36,13 @@ La classe Candidat comprend l'ensemble des termes identifiés dans le texte par 
 
 ### Expression
 
-La recherche d'`Expressions` (p.122) consiste à identifier des termes de la forme : `CAND + mot_schema + terme_quelconque` où `terme_quelconque` est un terme n'étant pas un mot fonctionnel ni un mot de schéma mais pouvant être un CAND. Cette recherche se déroule en trois étapes:
+La recherche d'`Expressions` (p.122) consiste à identifier des termes de la forme : `CAND1 (+ mot quelconque) + mot_schema + CAND`. Cette recherche se déroule en trois étapes:
 - sélection des fenêtres valides
     * la taille de la fenêtre est fixée à 3 (la taille d'une fenêtre étant donnée par la somme des valeurs des termes inclus dans la fenêtre: un terme fonctionnel valant 0 et les autres valant 1).
     * une fenêtre est valide si elle comprend au moins deux concepts distincts dont l'un est en première position
 - troncature des fenêtres sélectionnées:
-    * les fenêtres valides sont tronquées autour des concepts (`CAND` ou `terme_quelconque`). S'il y a plusieurs concepts dans la fenêtre, la fonction produit plusieurs fenêtres tronquées, une pour chaque couple
-    * une liste de fenêtres valides et tronquées est alors créée pour chaque couple `CAND + terme_quelconque` dans le texte
+    * les fenêtres valides sont tronquées après le second concepts (`CAND`). 
+    * une liste de fenêtres valides et tronquées est alors créée pour chaque couple `CAND + mot_schema + CAND` dans le texte.
 - identification de la morphologie la plus fréquente: toutes les formes (couples) dont la fréquence d'apparition est supérieur à un seuil `Sexp` (fixé à 3 par l'expérimentation') deviennent des candidats CAND
 
 ### Expansion
@@ -87,6 +86,7 @@ Attention les indices ne correspondent plus aux indices des mots dans le texte d
 - `defini_fenetres`: prend les paramètres: le dico des étiquettes, une liste de `CAND`, `W` (taille de la fenetre) et `w` (position du `CAND` dans la fenêtre (1, 2, 3 ou 4 souvent)) et sort une liste de toutes les suites d'étiquettes correspondant aux critères: ce sont les fenêtres. En fonction de la classe la fonction peut prendre une liste de tous les `CAND` en argument (pour `simple`), ou travailler candidat par candidat, donc ne prendre qu'un seul `CAND` en argument (pour `expression` et `expansion`).
 - `change_etiquette`: Prend en argument, le dico des étiquettes, plusieurs indices (consécutifs) dans ce dico et un type, ne retourne rien. Concatène les chaînes de caractères contenues dans ces étiquettes. Modifie la première étiquette de la liste: remplace par la chaîne concaténée précédement et lui attribue le type donné en argument. Supprime les autres étiquettes de la liste.
 Attention les indices dans la liste des étiquettes se décalent à chaque fois (supprime plusieurs item pour n'en insérer qu'un seul). 
+- `fenetre_sans_v`: prend une fenetre d'étiquette et supprime tout les mots de la stoplist contenu dans cette fenetre. retourne une fenetre_sans_v (sans mots_schema). Pas pour opérer mais pour faire des vérification de fenetres valides
 
 
 
