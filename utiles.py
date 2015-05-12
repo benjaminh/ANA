@@ -14,9 +14,9 @@ stopword_pattern = (r'') #sera utilisé comme var globale. (première fonction l
 #construit une regex de tous les stopWords
 def stopword_regex(stopword_file_path):
     with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
-        stoplines = stopwordfile.readlines()
-        stoplist = list(map(lambda s: re.sub(r'\n', '|', s), stoplines))
-        stopstring = ''.join(stoplist)
+        stoplist = construit_liste(stopwordfile)
+        stoplist = map(lambda s: "\\b" + s + "\\b", stoplist)
+        stopstring = '|'.join(stoplist)
         stopword_pattern = re.compile(stopstring, re.U)
 
 # attention div#0 si mot1 == mot2
@@ -40,7 +40,7 @@ def egal_sple_term(mot1, mot2):
             souple = True
     return souple
 
-#Prend 2 chaînes et retourne un booléen. Permet de définir si 2 chaînes sont égales. Retire les mots de la `stop_list` contenu dans les chaïnes. Calcul la sommes des proximités des paires de mots (chaine A, chaine B contiennent les paires A1 B1; A2 B2; A3 B3).
+#Prend 2 chaînes et retourne un booléen. Permet de définir si 2 chaînes sont égales. Retire les mots de la `stoplist` contenu dans les chaïnes. Calcul la sommes des proximités des paires de mots (chaine A, chaine B contiennent les paires A1 B1; A2 B2; A3 B3).
 def egal_sple_chain(chaine1, chaine2):
     ch1 = re.sub(stopword_pattern, '', ch1)
     ch2 = re.sub(stopword_pattern, '', ch2)
@@ -52,6 +52,14 @@ def egal_sple_chain(chaine1, chaine2):
             souple = egal_sple_term(mot1, mot2)
     return souple
 
+#prend un fichier ligne à ligne et construit une liste avec un élément dans la liste pour chaque ligne
+#file object est le produit de `open`
+def construit_liste(fileobject):
+    lignes = fileobject.readlines()
+    liste = list(map(lambda s: re.sub(r'\n', '', s), lignes))
+    liste.pop()
+    return liste
+    
 def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
     dico_etiq = {}
     i = 0
@@ -59,13 +67,12 @@ def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
         with open(stopword_file_path, 'r', encoding = 'utf8') as fichierstop:
             with open(bootstrap_file_path, 'r', encoding = 'utf8') as fichierbootstrap:
                 texte = fichiertxt.read()
-                stoplist = fichierstop.readlines()
-                stoplist = list(map(lambda s: re.sub(r'\n', '', s), stoplist))
-                cand = fichierbootstrap.readlines()
-                cands = list(map(lambda s: re.sub(r'\n', '', s), cand))
+                stoplist = construit_liste(fichierstop)
+                cands = construit_liste(fichierbootstrap)
                 #texte = re.sub('-', '_', texte) # pour éviter de perdre les traits d'union '-'
                 separateur = re.compile(r'\W+') #attention selon les distrib, W+ peut catcher les lettre accentuées comme des "non lettre"
                 mots = re.split(separateur, texte)
+                mots.pop()
                 for mot in mots:
                     motlower = mot.lower()
                     i += 1
