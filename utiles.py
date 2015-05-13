@@ -5,6 +5,7 @@ import math
 import os
 import re
 import distance
+from collections import Counter
 
 #paramètre globaux ou initialisation#############################
 seuil_egal_sple = 8
@@ -167,3 +168,23 @@ def est_un_cand(etiquette):
         return True
     else:
         return False
+        
+#prend une liste de fenetre candidates et retourne un string contenant la forme la plus fréquente
+def new_cand(liste_fenetres_cand):
+    liste_formes = []
+    for fenetre in liste_fenetres_cand:
+        forme = ''
+        for etiquette in fenetre: 
+            if etiquette[2] not in ['v', 't']:
+                forme += etiquette[2] 
+            else:
+                forme += etiquette[1]
+        forme += ' '
+        liste_formes.append(forme)
+    mostcommon = Counter(liste_formes).most_common(1) #mostcommon est une liste de 1 tuple [('forme', occurence)]
+    themostcommon = mostcommon[0] 
+    return themostcommon[0]
+
+    
+    
+    
