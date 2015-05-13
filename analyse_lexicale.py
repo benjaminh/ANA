@@ -9,7 +9,7 @@ import utiles
 # EXPANSION
 ##################################################################
 
-def recherche_expansion(dico_etiquettes,candidats):
+def recherche_expansion(dico_etiquettes,candidats, stopword_pattern):
     fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
     fenetres_valides = []
     liste_fenetres_cand = []
@@ -39,7 +39,7 @@ def recherche_expansion(dico_etiquettes,candidats):
         occurrence = 0
         # Compter le nombre d'occurence à l'égalité souple près
         for forme2 in liste_forme:
-            if (utiles.egal_sple_chain(forme1,forme2)):
+            if (utiles.egal_sple_chain(forme1,forme2, stopword_pattern)):
                 occurrence += 1
         if ( (occurrence) >= seuil ):
             print('TROUVE : ', forme1, ' ', occurrence)
