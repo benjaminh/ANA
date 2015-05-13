@@ -43,14 +43,14 @@ def egal_sple_term(mot1, mot2):
 
 #Prend 2 chaînes et retourne un booléen. Permet de définir si 2 chaînes sont égales. Retire les mots de la `stoplist` contenu dans les chaïnes. Calcul la sommes des proximités des paires de mots (chaine A, chaine B contiennent les paires A1 B1; A2 B2; A3 B3).
 def egal_sple_chain(chaine1, chaine2):
-    ch1 = re.sub(stopword_pattern, '', ch1)
-    ch2 = re.sub(stopword_pattern, '', ch2)
+    ch1 = re.sub(stopword_pattern, '', chaine1)
+    ch2 = re.sub(stopword_pattern, '', chaine2)
     ch1 = chaine1.split()
     ch2 = chaine2.split()
     souple = True
-    for mot1, mot2 in ch1, ch2:
-        while souple == True:
-            souple = egal_sple_term(mot1, mot2)
+    for mot1 in ch1:
+        for mot2 in ch2:
+                souple = egal_sple_term(mot1, mot2)
     return souple
 
 #prend un fichier ligne à ligne et construit une liste avec un élément dans la liste pour chaque ligne
