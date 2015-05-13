@@ -9,8 +9,6 @@ from collections import Counter
 
 #paramètre globaux ou initialisation#############################
 seuil_egal_sple = 8
-stopword_pattern = (r'') #sera utilisé comme var globale. (première fonction lancée)
-
 
 #construit une regex de tous les stopWords
 def stopword_regex(stopword_file_path):
@@ -19,6 +17,7 @@ def stopword_regex(stopword_file_path):
         stoplist = map(lambda s: "\\b" + s + "\\b", stoplist)
         stopstring = '|'.join(stoplist)
         stopword_pattern = re.compile(stopstring, re.U)
+        return stopword_pattern
 
 # attention div#0 si mot1 == mot2
 # utilisé pour egal_souple_term
@@ -61,7 +60,6 @@ def egal_sple_chain(chaine1, chaine2):
 def construit_liste(fileobject):
     lignes = fileobject.readlines()
     liste = list(map(lambda s: re.sub(r'\n', '', s), lignes))
-    liste.pop()
     return liste
     
 def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
@@ -76,7 +74,6 @@ def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
                 #texte = re.sub('-', '_', texte) # pour éviter de perdre les traits d'union '-'
                 separateur = re.compile(r'\W+') #attention selon les distrib, W+ peut catcher les lettre accentuées comme des "non lettre"
                 mots = re.split(separateur, texte)
-                mots.pop()
                 for mot in mots:
                     motlower = mot.lower()
                     i += 1
