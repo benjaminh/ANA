@@ -48,9 +48,12 @@ def egal_sple_chain(chaine1, chaine2):
     ch1 = chaine1.split()
     ch2 = chaine2.split()
     souple = True
-    for mot1 in ch1:
-        for mot2 in ch2:
-                souple = egal_sple_term(mot1, mot2)
+    if len(ch1) != len(ch2):
+        souple = False
+    else:
+        for mot in ch1:
+            if not egal_sple_term(ch2[ch1.index(mot)], mot):
+                souple = False
     return souple
 
 #prend un fichier ligne à ligne et construit une liste avec un élément dans la liste pour chaque ligne

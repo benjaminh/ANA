@@ -17,29 +17,38 @@ def recherche_expansion(dico_etiquettes,candidats):
     seuil = 2
     i = 0
     for fenetre in fenetres:
+        for etiquette in fenetre:
+            if utiles.est_un_cand(etiquette):
+                pos_cand = fenetre.index(etiquette)
         fenetre_propre = utiles.fenetre_sans_v(fenetre)
         # Le CAND est forcément en position 2 par construction et suppression des mots v
         if (fenetre_propre[0][2] == 't' and fenetre_propre[2][2] == 't'):
-            fenetres_valides.append([fenetre_propre[0], fenetre_propre[1]])
-            fenetres_valides.append([fenetre_propre[1], fenetre_propre[2]])
+            fenetres_valides.append(fenetre[:pos_cand+1])
+            fenetres_valides.append(fenetre[pos_cand:])
     for possible_cand in fenetres_valides:
-        forme1 = ''
-        forme2 = ''
+        forme = ''
         for etiquette in possible_cand:
-            if (etiquette[2] == 't'):
-                forme1 += etiquette[1]
+            if (etiquette[2] in ['t','v']):
+                forme += etiquette[1]
             else:
-                forme2 += etiquette[2]
-        liste_forme.append(forme1+forme2)
+                forme += etiquette[2]
+            forme += ' '
+        liste_forme.append(forme)
     # Vérification du dépassement de seuil
-    occurrence = 0
-    for forme in liste_forme:
-        occurrence = liste_forme.count(forme)
-        if ( occurrence >= seuil ):
+    for forme1 in liste_forme:
+        occurrence = 0
+        # Compter le nombre d'occurence à l'égalité souple près
+        for forme2 in liste_forme:
+            if (utiles.egal_sple_chain(forme1,forme2)):
+                occurrence += 1
+        if ( (occurrence) >= seuil ):
+            print('TROUVE : ', forme1, ' ', occurrence)
             liste_fenetres_cand.append(fenetres_valides[i])
         i += 1
     # Changer les étiquettes dans le texte
     for fenetre_cand in liste_fenetres_cand:
+        # TODO prendre en compte les nouveaux candidats du type "terme + (n * v) + CAND" par exemple
+        # ex: labels et APPELLATIONS devient LABELS ET APPELLATIONS
         new_cand = fenetre_cand[0][1] + ' ' + fenetre_cand[1][2]
         utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
     return liste_fenetres_cand
