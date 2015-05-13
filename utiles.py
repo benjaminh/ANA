@@ -124,8 +124,13 @@ def defini_fenetres(dico, liste_CAND, W, w):
                 fenetres.append(fenetre)  #met la fenetre dans la liste des fenetres recherchées.
     return fenetres
 
-def change_etiquette(dico, fenetre):
-#def change_etiquette(dico, indices, new_cand):
+def change_etiquette(dico, fenetre, new_cand):
+    '''
+    new_cand est une châine de caractères normalisée en fonction des cas:
+    - expression
+    - expansion
+    - simple
+    '''
     new_string_list = []
     fenetre.sort(key=lambda x: x[0]) #trie les étiquette de la fenetre par ordre d'indice croissant . au cas où
     
