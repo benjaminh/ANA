@@ -14,10 +14,11 @@ seuil_egal_sple = 8
 def stopword_regex(stopword_file_path):
     with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
         stoplist = construit_liste(stopwordfile)
-        stoplist = map(lambda s: "\\b" + s + "\\b", stoplist)
+        #stoplist = map(lambda s: "\\b" + s + "\\b", stoplist)
         stopstring = '|'.join(stoplist)
-        stopword_pattern = re.compile(stopstring, re.U)
-        return stopword_pattern
+        stopstring = '(?siu)' + '(' + stopstring + ')'
+        stopword_pattern = re.compile(stopstring)
+        return stoplist
 
 # attention div#0 si mot1 == mot2
 # utilisé pour egal_souple_term
@@ -41,11 +42,21 @@ def egal_sple_term(mot1, mot2):
     return souple
 
 #Prend 2 chaînes et retourne un booléen. Permet de définir si 2 chaînes sont égales. Retire les mots de la `stoplist` contenu dans les chaïnes. Calcul la sommes des proximités des paires de mots (chaine A, chaine B contiennent les paires A1 B1; A2 B2; A3 B3).
-def egal_sple_chain(chaine1, chaine2):
-    ch1 = re.sub(stopword_pattern, '', chaine1)
-    ch2 = re.sub(stopword_pattern, '', chaine2)
-    ch1 = chaine1.split()
-    ch2 = chaine2.split()
+def egal_sple_chain(chaine1, chaine2, stopword_pattern):
+#    ch1 = re.sub(stopword_pattern, '', chaine1)
+#    ch2 = re.sub(stopword_pattern, '', chaine2)
+    ch1 = []
+    ch2 = []
+    chaine1 = chaine1.split()
+    chaine2 = chaine2.split()
+    for word in chaine1:
+        word = word.lower()
+        if word not in stopword_pattern:
+            ch1.append(word)
+    for word in chaine2:
+        word = word.lower()
+        if word not in stopword_pattern:
+            ch2.append(word)
     souple = True
     if len(ch1) != len(ch2):
         souple = False
@@ -60,6 +71,7 @@ def egal_sple_chain(chaine1, chaine2):
 def construit_liste(fileobject):
     lignes = fileobject.readlines()
     liste = list(map(lambda s: re.sub(r'\n', '', s), lignes))
+    liste.pop()
     return liste
     
 def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
@@ -185,6 +197,7 @@ def new_cand(liste_fenetres_cand):
     themostcommon = mostcommon[0] 
     return themostcommon[0]
 
-    
+#p145 mais en différent! Pour modifier les étiquettes sans que les 3 modes de découverte de nouveau CAND se bousculent
+#def heuristique(newcand_et_liste_fenetre_cand)
     
     
