@@ -87,21 +87,20 @@ def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
                             dico_etiq[i] = [mot, cand]
                     if marked == False:
                         dico_etiq[i] = [mot, 't']
-            print(dico_etiq)
             return dico_etiq
 
 
 #prend en paramètres: le dico des étiquettes, une liste de `CAND`, `W` (taille de la fenetre) et `w` (position du `CAND` dans la fenêtre (1, 2, 3 ou 4 souvent)) et sort une liste de toutes les suites d'étiquettes numérotées (une fenetre) correspondant aux critères: les fenêtres. Les étiquettes sont de la forme [indice, mot, typemot] dans les fenetres.
 def defini_fenetres(dico, liste_CAND, W, w):
     fenetres = []
-    fenetre =[]
     av_cand = w-1 # nombre d'étiquette avant le candidat dans la fenetre
     ap_cand = W-w # nombre d'étiquette apres le candidat dans la fenetre
     for cand in liste_CAND:
         for key, value in iter(dico.items()):
+            fenetre =[]
             if cand == value[1]: #trouve les étiquettes contenant candidat dans le dico
                 #construit une fenetre composée d'étiquettes
-                fenetre.append(value) #ajoute l'étiquette du candidat trouvé
+                fenetre.append([key,value[0],value[1]]) #ajoute l'étiquette du candidat trouvé
                 comptAv = 0
                 comptAp = 0
                 key1 = key
@@ -122,7 +121,7 @@ def defini_fenetres(dico, liste_CAND, W, w):
                         fenetre.insert(0, etiquette) #insere les étiquettes en début de fenetre. etiquette de la forme [indice, mot, typemot]
                         if etiquette[2] != 'v':
                             comptAv += 1
-                fenetres.append(fenetre)  #met la fenetre dans la liste des fenetres recherchées. 
+                fenetres.append(fenetre)  #met la fenetre dans la liste des fenetres recherchées.
     return fenetres
 
 def change_etiquette(dico, fenetre):
@@ -163,12 +162,3 @@ def est_un_cand(etiquette):
         return True
     else:
         return False
-              
-#test##############################################
-txt_file_path = 'test/txt.txt'
-stopword_file_path = 'test/stoplist_Fr.txt'
-bootstrap_file_path = 'test/bootstrap'
-stopword_pattern = stopword_regex(stopword_file_path)
-etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path)
-
-#test##############################################
