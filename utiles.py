@@ -71,7 +71,6 @@ def egal_sple_chain(chaine1, chaine2, stopword_pattern):
 def construit_liste(fileobject):
     lignes = fileobject.readlines()
     liste = list(map(lambda s: re.sub(r'\n', '', s), lignes))
-    liste.pop()
     return liste
     
 def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
@@ -139,7 +138,7 @@ def defini_fenetres(dico, liste_CAND, W, w):
 
 def change_etiquette(dico, fenetre, new_cand):
     '''
-    new_cand est une châine de caractères normalisée en fonction des cas:
+    new_cand est une chaîne de caractères normalisée en fonction des cas:
     - expression
     - expansion
     - simple
@@ -170,6 +169,13 @@ def fenetre_sans_v(fenetre):
         if etiquette[2] != 'v':
             fenetre_sans_v.append(etiquette)
     return fenetre_sans_v
+
+# Pour faire des calculs d'occurrence sans se préoccuper des indices
+def fenetre_sans_indice(fenetre):
+    fenetre_sans_ind = []
+    for etiq in fenetre:
+        fenetre_sans_ind.append(etiq[1:])
+    return fenetre_sans_ind
 
 def symetrique_fenetre(fenetre):
     new_fenetre = list(reversed(fenetre))

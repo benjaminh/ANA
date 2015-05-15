@@ -9,7 +9,7 @@ import utiles
 # EXPANSION
 ##################################################################
 
-def recherche_expansion(dico_etiquettes,candidats, stopword_pattern):
+def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_pattern):
     fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
     fenetres_valides = []
     liste_fenetres_cand = []
@@ -17,14 +17,19 @@ def recherche_expansion(dico_etiquettes,candidats, stopword_pattern):
     seuil = 2
     i = 0
     for fenetre in fenetres:
+        presence_schema = False
         for etiquette in fenetre:
             if utiles.est_un_cand(etiquette):
                 pos_cand = fenetre.index(etiquette)
-        fenetre_propre = utiles.fenetre_sans_v(fenetre)
-        # Le CAND est forcément en position 2 par construction et suppression des mots v
-        if (fenetre_propre[0][2] == 't' and fenetre_propre[2][2] == 't'):
-            fenetres_valides.append(fenetre[:pos_cand+1])
-            fenetres_valides.append(fenetre[pos_cand:])
+            if etiquette[1] in mots_schema:
+                presence_schema = True
+        #Les expansions ne doivent pas contenir de mot de schéma
+        if not presence_schema:
+            fenetre_propre = utiles.fenetre_sans_v(fenetre)
+            # Le CAND est forcément en position 2 par construction et suppression des mots v
+            if (fenetre_propre[0][2] == 't' and fenetre_propre[2][2] == 't'):
+                fenetres_valides.append(fenetre[:pos_cand+1])
+                fenetres_valides.append(fenetre[pos_cand:])
     for possible_cand in fenetres_valides:
         forme = ''
         for etiquette in possible_cand:
@@ -42,14 +47,40 @@ def recherche_expansion(dico_etiquettes,candidats, stopword_pattern):
             if (utiles.egal_sple_chain(forme1,forme2, stopword_pattern)):
                 occurrence += 1
         if ( (occurrence) >= seuil ):
-            print('TROUVE : ', forme1, ' ', occurrence)
+            print('EXPANSIONS TROUVEES : ', forme1, ' ', occurrence)
             liste_fenetres_cand.append(fenetres_valides[i])
         i += 1
+
     # Changer les étiquettes dans le texte
+    liste_fenetres_cand_sans_indices = [utiles.fenetre_sans_indice(fenetre) for fenetre in liste_fenetres_cand]
+    for fenetre_cand in liste_fenetres_cand:
+        # Vérification de la présence d'une étiquette de candidat dans une unique fenêtre (les fenêtres étant tronquées autour des candidats)
+        # Si deux fenêtres se chevauchent avec le même candidat, prendre la forme qui a la plus grande occurrence
+        # Sinon, en choisir une au hasard
+        for etiquette in fenetre_cand:
+            if utiles.est_un_cand(etiquette):
+                cand = etiquette
+        for fenetre in liste_fenetres_cand:
+            # Détection d'un chevauchement
+            if (cand in fenetre and fenetre_cand != fenetre):
+                print('CHEVAUCHEMENT : ',fenetre_cand , ' et ', fenetre)
+                cand_fenetre_occ = liste_fenetres_cand_sans_indices.count(utiles.fenetre_sans_indice(fenetre_cand))
+                autre_fenetre_occ = liste_fenetres_cand_sans_indices.count(utiles.fenetre_sans_indice(fenetre))
+                if (cand_fenetre_occ >= autre_fenetre_occ):
+                    liste_fenetres_cand.pop(liste_fenetres_cand.index(fenetre))
+                else:
+                    liste_fenetres_cand.pop(liste_fenetres_cand.index(fenetre_cand))
     for fenetre_cand in liste_fenetres_cand:
         # TODO prendre en compte les nouveaux candidats du type "terme + (n * v) + CAND" par exemple
         # ex: labels et APPELLATIONS devient LABELS ET APPELLATIONS
-        new_cand = fenetre_cand[0][1] + ' ' + fenetre_cand[1][2]
+        new_forme = ''
+        for etiquette in fenetre_cand:
+            if (etiquette[2] in ['t','v']):
+                new_forme += etiquette[1]
+            else:
+                new_forme += etiquette[2]
+            new_forme += ' '
+        new_cand = new_forme
         utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
     return liste_fenetres_cand
 
@@ -108,24 +139,25 @@ def recherche_expression(dico_etiquettes,candidat,schema):
 # SIMPLE
 ##################################################################
 
-#def simple_fenetre_valide(fenetre,schema,candidats):
-#    for etiquette in fenetre:
-#        if (etiquette[2] in schema):
-#            mot_schema = etiquette
-#        schema_index = fenetre.index(mot_schema)
-#        if (fenetre[schema_index-1] == 't' or est_un_cand(fenetre[schema_index-1] or (fenetre[schema_index-1] == 'v' and (fenetre[schema_index-2] == 't' or est_un_cand(fenetre[schema_index-2]))
-#        and (fenetre[schema_index+1] == 't' or est_un_cand(fenetre[schema_index+1] or (fenetre[schema_index+1] == 'v' and (fenetre[schema_index+2] == 't' or est_un_cand(fenetre[schema_index+2])):
-#            return True
-#        else return False
+def simple_fenetre_valide(fenetre,schema,candidats):
+    for etiquette in fenetre:
+        if (etiquette[2] in schema):
+            mot_schema = etiquette
+        schema_index = fenetre.index(mot_schema)
+        if (fenetre[schema_index-1] == 't' or est_un_cand(fenetre[schema_index-1]) or (fenetre[schema_index-1] == 'v' and (fenetre[schema_index-2] == 't' or est_un_cand(fenetre[schema_index-2])) and (fenetre[schema_index+1] == 't' or est_un_cand(fenetre[schema_index+1]) or (fenetre[schema_index+1] == 'v' and (fenetre[schema_index+2] == 't' or est_un_cand(fenetre[schema_index+2])))))):
+            return True
+        else:
+            return False
     
-#def recherche_simple(dico_etiquettes,candidats,schema):
-#    fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,5,3)
-#    fenetres_valides = []
-#    liste_cand = []
-#    seuil = [3,5,5,10]
-#    for fenetre in fenetres:
-#        if simple_fenetre_valide(fenetre) and simple_fenetre_valide(symetrique_fenetre(fenetre)):
-#            fenetres_valides.append(fenetre)
+def recherche_simple(dico_etiquettes,candidats,schema):
+    fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
+    fenetres_valides = []
+    liste_cand = []
+    seuil = [3,5,5,10]
+    for fenetre in fenetres:
+        if simple_fenetre_valide(fenetre) and simple_fenetre_valide(utiles.symetrique_fenetre(fenetre)):
+            fenetres_valides.append(fenetre)
+    liste_cand = simple_repere_cand(fenetres_valides,seuil)
     
 
 
