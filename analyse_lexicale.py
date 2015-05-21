@@ -38,7 +38,7 @@ def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_patte
             else:
                 forme += etiquette[2]
             forme += ' '
-        liste_forme.append(forme)
+        liste_forme.append(forme.strip())
     # Vérification du dépassement de seuil
     for forme1 in liste_forme:
         occurrence = 0
@@ -47,8 +47,8 @@ def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_patte
             if (utiles.egal_sple_chain(forme1,forme2, stopword_pattern)):
                 occurrence += 1
         if ( (occurrence) >= seuil ):
-            print('EXPANSIONS TROUVEES : ', forme1, ' ', occurrence)
             liste_fenetres_cand.append(fenetres_valides[i])
+            print('EXPANSION TROUVEE : ', forme1, ' ', occurrence)
         i += 1
 
     # Changer les étiquettes dans le texte
@@ -88,7 +88,7 @@ def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_patte
 # EXPRESSION
 ##################################################################
 
-#schema = [de, du, des, en] pourquoi pas "avec"
+#schema = [au, aux, d',de, du, des, en] pourquoi pas "avec"
 #une fenetre valide ne contient que 2 CAND, séparés par un mot de schéma, avec éventuellement un mot 't' au milieu. 
 def expression_fenetre_valide(fenetre,cand,schema):
     valide =[]
@@ -97,7 +97,7 @@ def expression_fenetre_valide(fenetre,cand,schema):
 
     for etiquette in fenetre:
         if compte_cand < 2:
-            if etiquette[2] in schema:
+            if etiquette[1] in schema:
                 schema_present = True
             if utiles.est_un_cand(etiquette):
                 compte_cand += 1 # capte forcément le premier candidat, qui sera identique dans toutes les fenetres. (voir le focntionnement de utiles.defini_fenetres)
@@ -107,33 +107,41 @@ def expression_fenetre_valide(fenetre,cand,schema):
 
 def expression_repere_cand(fenetres_valides, seuil):
     liste_forme = []
-    liste_cand = []
+    liste_fenetres_cand = []
     i = 0
     for fenetre in fenetres_valides:
         forme = ''
         #créer une forme pour chaque fenetre. une forme est 'CANDCAND'
-        #apriori toutes les formes commenceront par le même cand (celui en argument de la fonction `recherche_Expression`)
+        #apriori toutes les formes commenceront par le même cand (celui en argument de la fonction `recherche_expression`)
         for etiquette in fenetre:
             if utiles.est_un_cand(etiquette):
                 forme += etiquette[2] 
         liste_forme.append(forme) # l'ordre des formes dans liste_forme conserve l'ordre des fenetres in fenetres_valides
         
     for forme in liste_forme:
-        i += 1
         occ = liste_forme.count(forme)
         if occ >= seuil:
-            liste_cand.append(fenetres_valides[i])
-    return liste_cand
+            liste_fenetres_cand.append(fenetres_valides[i])
+        i += 1
+    return liste_fenetres_cand
    
-def recherche_expression(dico_etiquettes,candidat,schema):
-    fenetres = utiles.defini_fenetres(dico_etiquettes,candidat,3,1) #feentre du type `CAND1 + (cand ou mot quelconque) + (cand ou mot quelconque)`. Les mots stop ("v") ne sont pas représentés
-    fenetres_valides = []
-    liste_cand = []
-    seuil = 3
-    for fenetre in fenetres:
-        fenetres_valides.append(expression_fenetre_valide(fenetre,candidat,schema))
-    liste_cand = expression_repere_cand(fenetres_valides, seuil)
-
+def recherche_expression(dico_etiquettes,candidats,schema):
+    for candidat in candidats:
+        candidat = [candidat]
+        fenetres = utiles.defini_fenetres(dico_etiquettes,candidat,3,1) #fenetre du type `CAND1 + (cand ou mot quelconque) + (cand ou mot quelconque)`. Les mots stop ("v") ne sont pas représentés
+        fenetres_valides = []
+        liste_fenetres_cand = []
+        seuil = 2
+        for fenetre in fenetres:
+            fenetre_valide = expression_fenetre_valide(fenetre,candidat,schema)
+            if fenetre_valide: #évite les erreur dûes à une fenetre valide  vide.
+                fenetres_valides.append(expression_fenetre_valide(fenetre,candidat,schema))
+        if fenetres_valides != []:
+            liste_fenetres_cand = expression_repere_cand(fenetres_valides, seuil)
+            new_cand, occurrence = utiles.new_cand(liste_fenetres_cand)
+            print('EXPRESSION TROUVEE : ', new_cand, ' ', occurrence)
+            for fenetre_cand in liste_fenetres_cand:
+                utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
 
 ##################################################################
 # SIMPLE

@@ -187,7 +187,7 @@ def est_un_cand(etiquette):
     else:
         return False
         
-#prend une liste de fenetre candidates et retourne un string contenant la forme la plus fréquente
+#prend une liste de fenetre candidates et retourne un tuple [string, int] contenant la forme la plus fréquente et son occurence
 def new_cand(liste_fenetres_cand):
     liste_formes = []
     for fenetre in liste_fenetres_cand:
@@ -197,11 +197,11 @@ def new_cand(liste_fenetres_cand):
                 forme += etiquette[2] 
             else:
                 forme += etiquette[1]
-        forme += ' '
-        liste_formes.append(forme)
+            forme += ' '
+        liste_formes.append(forme.strip())
     mostcommon = Counter(liste_formes).most_common(1) #mostcommon est une liste de 1 tuple [('forme', occurence)]
-    themostcommon = mostcommon[0] 
-    return themostcommon[0]
+    themostcommon = mostcommon[0]
+    return themostcommon #forme string et occurence de cette forme
 
 #p145 mais en différent! Pour modifier les étiquettes sans que les 3 modes de découverte de nouveau CAND se bousculent
 #def heuristique(newcand_et_liste_fenetre_cand)
