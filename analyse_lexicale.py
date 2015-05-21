@@ -91,19 +91,8 @@ def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_patte
 #schema = [au, aux, d',de, du, des, en] pourquoi pas "avec"
 #une fenetre valide ne contient que 2 CAND, séparés par un mot de schéma, avec éventuellement un mot 't' au milieu. 
 def expression_fenetre_valide(fenetre,cand,schema):
-    valide =[]
-    compte_cand = 0
-    schema_present = False
-
-    for etiquette in fenetre:
-        if compte_cand < 2:
-            if etiquette[1] in schema:
-                schema_present = True
-            if utiles.est_un_cand(etiquette):
-                compte_cand += 1 # capte forcément le premier candidat, qui sera identique dans toutes les fenetres. (voir le focntionnement de utiles.defini_fenetres)
-            valide.append(etiquette)
-    if (schema_present == True and compte_cand == 2):
-        return valide
+    if (utiles.schema_present(fenetre, schema) == True and utiles.compte_cand(fenetre) == 2):
+        return fenetre
 
 def expression_repere_cand(fenetres_valides, seuil):
     liste_forme = []
@@ -147,24 +136,44 @@ def recherche_expression(dico_etiquettes,candidats,schema):
 # SIMPLE
 ##################################################################
 
-def simple_fenetre_valide(fenetre,schema,candidats):
-    for etiquette in fenetre:
-        if (etiquette[2] in schema):
-            mot_schema = etiquette
-        schema_index = fenetre.index(mot_schema)
-        if (fenetre[schema_index-1] == 't' or est_un_cand(fenetre[schema_index-1]) or (fenetre[schema_index-1] == 'v' and (fenetre[schema_index-2] == 't' or est_un_cand(fenetre[schema_index-2])) and (fenetre[schema_index+1] == 't' or est_un_cand(fenetre[schema_index+1]) or (fenetre[schema_index+1] == 'v' and (fenetre[schema_index+2] == 't' or est_un_cand(fenetre[schema_index+2])))))):
-            return True
-        else:
-            return False
-    
+#on cherche des mots rattachés à n'importe quel candidat par un mot de schéma. ex: couleurs de FLEUR, couleur de MUR, colleur de CARTON (c'est un exemple problematique)
+# -> captera couleur. 
+
+#fait une liste de tous les mots trouvés (modulo une égalité souple)
+def liste_mots_trouves(fenetres_valides):
+    liste_mots = []
+    for fenetre in fenetres_valides:
+        for etiquette in fenetre:
+            if etiquette[2] == 't':
+                liste_mots.append(etiquette[1])
+    return liste_mots
+
+#doit retourner la fenetre tronquée valide contenant un mot (non CAND) lié à un CAND par un mot schéma (après ce CAND) ou none si ne trouve rien. 
+def simple_fenetre_valide(fenetre,schema):
+    if utiles.schema_present(fenetre, schema):
+        for etiquette in fenetre:
+            index_cand = 0
+            if utiles.est_un_cand(etiquette):
+                index_cand = fenetre.index(etiquette)
+        fenetre_droite = fenetre[pos_cand:]
+        if utiles.compte_cand(fenetre_droite) < 2:
+            return fenetre_droite
+
 def recherche_simple(dico_etiquettes,candidats,schema):
     fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
     fenetres_valides = []
-    liste_cand = []
+    liste_fenetres_cand = []
     seuil = [3,5,5,10]
     for fenetre in fenetres:
-        if simple_fenetre_valide(fenetre) and simple_fenetre_valide(utiles.symetrique_fenetre(fenetre)):
-            fenetres_valides.append(fenetre)
+        fenetre_valide = simple_fenetre_valide(fenetre,schema)
+        if fenetre_valide:
+            fenetres_valides.append(fenetre_valide)
+        
+        fenetreR = utiles.symetrique_fenetre(fenetre)
+        fenetre_valideR = simple_fenetre_valide(fenetreR,schema)
+        if fenetre_valideR:
+            fenetres_valides.append(fenetre_valideR)
+            
     liste_cand = simple_repere_cand(fenetres_valides,seuil)
     
 

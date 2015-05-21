@@ -12,6 +12,8 @@ schema_file_path = 'test/schema'
 stopword_pattern = utiles.stopword_regex(stopword_file_path)
 etiq_text = utiles.etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path)
 
+# construire la liste cands à partir d'une recherche dans le dico des étiquettes et pas à partir du fichier bootstrap
+
 with open(bootstrap_file_path, 'r', encoding = 'utf8') as fichierbootstrap:
     cands = utiles.construit_liste(fichierbootstrap)
     with open(schema_file_path, 'r', encoding = 'utf8') as fichierschema:

@@ -187,6 +187,20 @@ def est_un_cand(etiquette):
     else:
         return False
         
+def compt_cand(fenetre):
+    compte_cand = 0
+    for etiquette in fenetre:
+        if est_un_cand(etiquette):
+            compte_cand += 1
+    return compte_cand
+    
+def schema_present(fenetre, schema):
+    schema_present = False
+    for etiquette in fenetre:
+        if etiquette[1] in schema:
+            schema_present = True
+    return schema_present
+        
 #prend une liste de fenetre candidates et retourne un tuple [string, int] contenant la forme la plus fréquente et son occurence
 def new_cand(liste_fenetres_cand):
     liste_formes = []
