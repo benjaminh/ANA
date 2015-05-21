@@ -142,39 +142,54 @@ def recherche_expression(dico_etiquettes,candidats,schema):
 #fait une liste de tous les mots trouvés (modulo une égalité souple)
 def dico_mots_trouves(fenetres_valides):
     dico_t = {}
+    # On ne peut pas modifier au fil de l'eau un dict sur lequel on itère
+    # Donc on construit d'abord un dict avec tous les mots t
+    # Peu importe s'ils sont égaux à l'égalité souple près
     for fenetre in fenetres_valides:
         for etiquette in fenetre: #a priori il n'y a qu'un seul t dans chaque fenetre'
             if etiquette[2] == 't':
-                for t in dico_t:
-                    if utiles.egal_sple_term(t, etiquette[1]):
-                        dico_t[t] += fenetre
-                    else :
-                        dico_t[etiquette[1]] = fenetre
-    return dico_t
+                if etiquette[1] in dico_t:
+                    dico_t[etiquette[1]].append(fenetre)
+                else:
+                    dico_t[etiquette[1]] = [fenetre]
+    # On nettoie le dico en utilisant l'égalité souple
+    dico_final = {}
+    for t in dico_t.keys():
+        dico_final[t] = []
+        for t2 in dico_t.keys():
+            if utiles.egal_sple_term(t, t2):
+                dico_final[t].append(dico_t[t])
+                dico_final[t].append(dico_t[t2])
+    return dico_final
     
 def simple_repere_cand(dico_t, seuil, schema):
-    compt_s1 = 0 #Meme mot schema et même CAND
-    compt_s2 = 0 #Meme mot schema et CAND differents
-    compt_s3 = 0 #Mot schema different et même CAND
-    compt_s4 = 0 #Mot schema different et CAND different
-    for t, fenetres in iter(dico_t.iteritems()):
-        for fenetre in fenetres:
+    liste_cand = []
+    for t, fenetres in dico_t.items():
+        
+        compt_s1 = 0 #Meme mot schema et même CAND
+        compt_s2 = 0 #Meme mot schema et CAND differents
+        compt_s3 = 0 #Mot schema different et même CAND
+        compt_s4 = 0 #Mot schema different et CAND different
+        for fenetre in fenetres[0]:
             mot_schema = utiles.quel_schema(fenetre,schema)
             cand = utiles.quel_cand(fenetre)
             
-            for fenetre1 in fenetres:
-                schema1 = utiles.quel_schema(fenetre1,schema)
+            for fenetre1 in fenetres[0]:
+                mot_schema1 = utiles.quel_schema(fenetre1,schema)
                 cand1 = utiles.quel_cand(fenetre1)
-                if schema[1] == schema1[1] and cand[2] == cand1[2]:
+                # TODO supprimer les doublons
+                if mot_schema[1] == mot_schema1[1] and cand[2] == cand1[2]:
                     compt_s1 += 1
-                else if schema[1] == schema1[1] and cand[2] != cand1[2]:
+                elif mot_schema[1] == mot_schema1[1] and cand[2] != cand1[2]:
                     compt_s2 += 1
-                else if schema[1] != schema1[1] and cand[2] == cand1[2]:
+                elif mot_schema[1] != mot_schema1[1] and cand[2] == cand1[2]:
                     compt_s3 += 1
-                else if schema[1] != schema1[1] and cand[2] != cand1[2]:
+                elif mot_schema[1] != mot_schema1[1] and cand[2] != cand1[2]:
                     compt_s4 += 1
         if compt_s1 >= seuil[0] or compt_s2 >= seuil[1] or compt_s3 >= seuil[2] or compt_s4 >= seuil[3]:
-            return t
+            liste_cand.append(t)
+            print("SIMPLE TROUVE : ", t , ' ', compt_s1,compt_s2,compt_s3,compt_s4)
+    return liste_cand
 
 #doit retourner la fenetre tronquée valide contenant un mot (non CAND) lié à un CAND par un mot schéma (après ce CAND) ou none si ne trouve rien. 
 def simple_fenetre_valide(fenetre,schema):
@@ -183,7 +198,7 @@ def simple_fenetre_valide(fenetre,schema):
             index_cand = 0
             if utiles.est_un_cand(etiquette):
                 index_cand = fenetre.index(etiquette)
-        fenetre_droite = fenetre[pos_cand:]
+        fenetre_droite = fenetre[index_cand:]
         if utiles.compte_cand(fenetre_droite) < 2:
             return fenetre_droite
 
@@ -196,11 +211,11 @@ def recherche_simple(dico_etiquettes,candidats,schema):
         fenetre_valide = simple_fenetre_valide(fenetre,schema)
         if fenetre_valide:
             fenetres_valides.append(fenetre_valide)
-        
-        fenetreR = utiles.symetrique_fenetre(fenetre)
-        fenetre_valideR = simple_fenetre_valide(fenetreR,schema)
-        if fenetre_valideR:
-            fenetres_valides.append(fenetre_valideR)
+        else:
+            fenetreR = utiles.symetrique_fenetre(fenetre)
+            fenetre_valideR = simple_fenetre_valide(fenetreR,schema)
+            if fenetre_valideR:
+                fenetres_valides.append(fenetre_valideR)
             
     dico_t = dico_mots_trouves(fenetres_valides)
     liste_cand = simple_repere_cand(dico_t,seuil,schema)

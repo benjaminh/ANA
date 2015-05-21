@@ -19,5 +19,7 @@ with open(bootstrap_file_path, 'r', encoding = 'utf8') as fichierbootstrap:
     with open(schema_file_path, 'r', encoding = 'utf8') as fichierschema:
         mots_schema = utiles.construit_liste(fichierschema)
         print('BOOTSTRAP : ',cands)    
-        analyse_lexicale.recherche_expansion(etiq_text, cands, mots_schema, stopword_pattern)
-        analyse_lexicale.recherche_expression(etiq_text, cands, mots_schema)
+        #analyse_lexicale.recherche_expansion(etiq_text, cands, mots_schema, stopword_pattern)
+        #analyse_lexicale.recherche_expression(etiq_text, cands, mots_schema)
+        analyse_lexicale.recherche_simple(etiq_text, cands, mots_schema)
+        

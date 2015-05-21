@@ -187,7 +187,7 @@ def est_un_cand(etiquette):
     else:
         return False
         
-def compt_cand(fenetre):
+def compte_cand(fenetre):
     compte_cand = 0
     for etiquette in fenetre:
         if est_un_cand(etiquette):
