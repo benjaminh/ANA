@@ -140,13 +140,41 @@ def recherche_expression(dico_etiquettes,candidats,schema):
 # -> captera couleur. 
 
 #fait une liste de tous les mots trouvés (modulo une égalité souple)
-def liste_mots_trouves(fenetres_valides):
-    liste_mots = []
+def dico_mots_trouves(fenetres_valides):
+    dico_t = {}
     for fenetre in fenetres_valides:
-        for etiquette in fenetre:
+        for etiquette in fenetre: #a priori il n'y a qu'un seul t dans chaque fenetre'
             if etiquette[2] == 't':
-                liste_mots.append(etiquette[1])
-    return liste_mots
+                for t in dico_t:
+                    if utiles.egal_sple_term(t, etiquette[1]):
+                        dico_t[t] += fenetre
+                    else :
+                        dico_t[etiquette[1]] = fenetre
+    return dico_t
+    
+def simple_repere_cand(dico_t, seuil, schema):
+    compt_s1 = 0 #Meme mot schema et même CAND
+    compt_s2 = 0 #Meme mot schema et CAND differents
+    compt_s3 = 0 #Mot schema different et même CAND
+    compt_s4 = 0 #Mot schema different et CAND different
+    for t, fenetres in iter(dico_t.iteritems()):
+        for fenetre in fenetres:
+            mot_schema = utiles.quel_schema(fenetre,schema)
+            cand = utiles.quel_cand(fenetre)
+            
+            for fenetre1 in fenetres:
+                schema1 = utiles.quel_schema(fenetre1,schema)
+                cand1 = utiles.quel_cand(fenetre1)
+                if schema[1] == schema1[1] and cand[2] == cand1[2]:
+                    compt_s1 += 1
+                else if schema[1] == schema1[1] and cand[2] != cand1[2]:
+                    compt_s2 += 1
+                else if schema[1] != schema1[1] and cand[2] == cand1[2]:
+                    compt_s3 += 1
+                else if schema[1] != schema1[1] and cand[2] != cand1[2]:
+                    compt_s4 += 1
+        if compt_s1 >= seuil[0] or compt_s2 >= seuil[1] or compt_s3 >= seuil[2] or compt_s4 >= seuil[3]:
+            return t
 
 #doit retourner la fenetre tronquée valide contenant un mot (non CAND) lié à un CAND par un mot schéma (après ce CAND) ou none si ne trouve rien. 
 def simple_fenetre_valide(fenetre,schema):
@@ -174,7 +202,5 @@ def recherche_simple(dico_etiquettes,candidats,schema):
         if fenetre_valideR:
             fenetres_valides.append(fenetre_valideR)
             
-    liste_cand = simple_repere_cand(fenetres_valides,seuil)
-    
-
-
+    dico_t = dico_mots_trouves(fenetres_valides)
+    liste_cand = simple_repere_cand(dico_t,seuil,schema)
