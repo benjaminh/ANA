@@ -33,7 +33,7 @@ def prox(motA, motB):
 #Prend 2 termes et retourne un booléen. Permet de définir si 2 termes sont égaux, en calculant une proximité entre eux. Un seuil de flexibilité est défini. ne tient pas compte des majuscules mais des accent oui. 
 def egal_sple_term(mot1, mot2):
     souple = False
-    if ((mot1 == mot2) or (mot1 == mot2 + 's') or (mot1 == mot2 + 's')):
+    if ((mot1.lower() == mot2.lower()) or (mot1.lower() == mot2.lower() + 's') or (mot1.lower() == mot2.lower() + 's')):
         souple = True
     else:
         proximite = prox(mot1, mot2)
