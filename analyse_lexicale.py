@@ -3,7 +3,7 @@
 
 import re
 import utiles
-
+from math import *
 
 ##################################################################
 # EXPANSION
@@ -149,34 +149,54 @@ def dico_mots_trouves(fenetres_valides):
         for etiquette in fenetre: #a priori il n'y a qu'un seul t dans chaque fenetre'
             if etiquette[2] == 't':
                 if etiquette[1] in dico_t:
-                    dico_t[etiquette[1]].append(fenetre)
+                    dico_t[etiquette[1]].extend([fenetre])
                 else:
                     dico_t[etiquette[1]] = [fenetre]
     # On nettoie le dico en utilisant l'égalité souple
-    dico_final = {}
+    dico_t_2 = {}
+    deja_fait = []
     for t in dico_t.keys():
-        dico_final[t] = []
-        for t2 in dico_t.keys():
+        if t not in deja_fait:
+            dico_t_2[t] = dico_t[t]
+            for t2 in dico_t.keys():
+                if t != t2 and utiles.egal_sple_term(t, t2):
+                    dico_t_2[t].extend(dico_t[t2])
+                    deja_fait.append(t2)
+
+    dico_final = {}
+    for t in dico_t_2.keys():
+        tampon = {}
+        for t2 in dico_t_2.keys():
             if utiles.egal_sple_term(t, t2):
-                dico_final[t].append(dico_t[t])
-                dico_final[t].append(dico_t[t2])
+                if len(dico_t_2[t]) > len(dico_t_2[t2]):
+                    if (t not in tampon):
+                        tampon[t] = dico_t_2[t]
+                        if t2 in tampon and t != t2:
+                            del(tampon[t2])
+                else:
+                    if (t2 not in tampon):
+                        tampon[t2] = dico_t_2[t2]
+                        if t in tampon and t != t2:
+                            del(tampon[t])
+        if list(tampon.keys())[0] not in dico_final:
+            dico_final.update(tampon)
     return dico_final
     
 def simple_repere_cand(dico_t, seuil, schema):
     liste_cand = []
     for t, fenetres in dico_t.items():
-        
         compt_s1 = 0 #Meme mot schema et même CAND
         compt_s2 = 0 #Meme mot schema et CAND differents
         compt_s3 = 0 #Mot schema different et même CAND
         compt_s4 = 0 #Mot schema different et CAND different
-        for fenetre in fenetres[0]:
+        for fenetre in fenetres:
             mot_schema = utiles.quel_schema(fenetre,schema)
             cand = utiles.quel_cand(fenetre)
             
-            for fenetre1 in fenetres[0]:
+            for fenetre1 in fenetres:
                 mot_schema1 = utiles.quel_schema(fenetre1,schema)
                 cand1 = utiles.quel_cand(fenetre1)
+                print(t,mot_schema,mot_schema1,cand,cand1)
                 # TODO supprimer les doublons
                 if mot_schema[1] == mot_schema1[1] and cand[2] == cand1[2]:
                     compt_s1 += 1
@@ -186,9 +206,11 @@ def simple_repere_cand(dico_t, seuil, schema):
                     compt_s3 += 1
                 elif mot_schema[1] != mot_schema1[1] and cand[2] != cand1[2]:
                     compt_s4 += 1
-        if compt_s1 >= seuil[0] or compt_s2 >= seuil[1] or compt_s3 >= seuil[2] or compt_s4 >= seuil[3]:
+        if sqrt(compt_s1) >= seuil[0] or sqrt(compt_s2) >= seuil[1] or sqrt(compt_s3) >= seuil[2] or sqrt(compt_s4) >= seuil[3]:
             liste_cand.append(t)
-            print("SIMPLE TROUVE : ", t , ' ', compt_s1,compt_s2,compt_s3,compt_s4)
+            print("SIMPLE TROUVE : ", t , ' ', sqrt(compt_s1),sqrt(compt_s2),sqrt(compt_s3),sqrt(compt_s4))
+        else:
+            print("SIMPLE PAS TROUVE : ", t , ' ', sqrt(compt_s1),sqrt(compt_s2),sqrt(compt_s3),sqrt(compt_s4))
     return liste_cand
 
 #doit retourner la fenetre tronquée valide contenant un mot (non CAND) lié à un CAND par un mot schéma (après ce CAND) ou none si ne trouve rien. 
