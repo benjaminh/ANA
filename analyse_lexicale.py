@@ -196,7 +196,7 @@ def simple_repere_cand(dico_t, seuil, schema):
             for fenetre1 in fenetres:
                 mot_schema1 = utiles.quel_schema(fenetre1,schema)
                 cand1 = utiles.quel_cand(fenetre1)
-                print(t,mot_schema,mot_schema1,cand,cand1)
+                #print(t,mot_schema,mot_schema1,cand,cand1)
                 # TODO supprimer les doublons
                 if mot_schema[1] == mot_schema1[1] and cand[2] == cand1[2]:
                     compt_s1 += 1
@@ -206,11 +206,11 @@ def simple_repere_cand(dico_t, seuil, schema):
                     compt_s3 += 1
                 elif mot_schema[1] != mot_schema1[1] and cand[2] != cand1[2]:
                     compt_s4 += 1
-        if sqrt(compt_s1) >= seuil[0] or sqrt(compt_s2) >= seuil[1] or sqrt(compt_s3) >= seuil[2] or sqrt(compt_s4) >= seuil[3]:
+        if compt_s1 >= seuil[0] or compt_s2 >= seuil[1] or compt_s3 >= seuil[2] or compt_s4 >= seuil[3]:
             liste_cand.append(t)
-            print("SIMPLE TROUVE : ", t , ' ', sqrt(compt_s1),sqrt(compt_s2),sqrt(compt_s3),sqrt(compt_s4))
-        else:
-            print("SIMPLE PAS TROUVE : ", t , ' ', sqrt(compt_s1),sqrt(compt_s2),sqrt(compt_s3),sqrt(compt_s4))
+            print("SIMPLE TROUVE : ", t , ' ', compt_s1,compt_s2,compt_s3,compt_s4)
+#        else:
+#            print("SIMPLE PAS TROUVE : ", t , ' ', compt_s1,compt_s2,compt_s3,compt_s4)
     return liste_cand
 
 #doit retourner la fenetre tronquée valide contenant un mot (non CAND) lié à un CAND par un mot schéma (après ce CAND) ou none si ne trouve rien. 
@@ -220,8 +220,9 @@ def simple_fenetre_valide(fenetre,schema):
             index_cand = 0
             if utiles.est_un_cand(etiquette):
                 index_cand = fenetre.index(etiquette)
+                break
         fenetre_droite = fenetre[index_cand:]
-        if utiles.compte_cand(fenetre_droite) < 2:
+        if utiles.compte_cand(fenetre_droite) < 2 and utiles.schema_present(fenetre_droite, schema):
             return fenetre_droite
 
 def recherche_simple(dico_etiquettes,candidats,schema):
