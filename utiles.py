@@ -227,6 +227,20 @@ def new_cand(liste_fenetres_cand):
     themostcommon = mostcommon[0]
     return themostcommon #forme string et occurence de cette forme
 
+# tronque une fenetre après un certain nombre de mot non "v"
+def tronque_fenetre(fenetre, nombre_mots):
+    compteur = 0
+    tronque = []
+    for etiquette in fenetre:
+        if compteur < nombre_mots:
+            tronque.append(etiquette)
+        if etiquette[2] != 'v':
+            compteur += 1
+        if compteur == nombre_mots:
+            break
+    return tronque
+
+
 #p145 mais en différent! Pour modifier les étiquettes sans que les 3 modes de découverte de nouveau CAND se bousculent
 #def heuristique(newcand_et_liste_fenetre_cand)
     
