@@ -89,7 +89,7 @@ def etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path):
                     motlower = mot.lower()
                     i += 1
                     marked = False
-                    if motlower in stoplist:
+                    if (motlower in stoplist) or (re.match(r'(\b\d+\b)', mot) and not re.match(r'(1\d\d\d|20\d\d)', mot)): #les chiffres sont des 'v' mais pas les dates.:
                         marked = True
                         dico_etiq[i] = [mot, 'v']
                     for cand in cands:
