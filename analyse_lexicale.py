@@ -50,7 +50,6 @@ def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_patte
             liste_fenetres_cand.append(fenetres_valides[i])
             print('EXPANSION TROUVEE : ', forme1, ' ', occurrence)
         i += 1
-
     # Changer les étiquettes dans le texte
     liste_fenetres_cand_sans_indices = [utiles.fenetre_sans_indice(fenetre) for fenetre in liste_fenetres_cand]
     for fenetre_cand in liste_fenetres_cand:
@@ -63,7 +62,6 @@ def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_patte
         for fenetre in liste_fenetres_cand:
             # Détection d'un chevauchement
             if (cand in fenetre and fenetre_cand != fenetre):
-                print('CHEVAUCHEMENT : ',fenetre_cand , ' et ', fenetre)
                 cand_fenetre_occ = liste_fenetres_cand_sans_indices.count(utiles.fenetre_sans_indice(fenetre_cand))
                 autre_fenetre_occ = liste_fenetres_cand_sans_indices.count(utiles.fenetre_sans_indice(fenetre))
                 if (cand_fenetre_occ >= autre_fenetre_occ):
@@ -105,7 +103,7 @@ def expression_fenetre_valide(fenetre,cand,schema):
 
 def expression_repere_cand(fenetres_valides, seuil):
     liste_forme = []
-    liste_fenetres_cand = []
+    dico_fenetres_cand = {}
     i = 0
     for fenetre in fenetres_valides:
         forme = ''
@@ -119,9 +117,12 @@ def expression_repere_cand(fenetres_valides, seuil):
     for forme in liste_forme:
         occ = liste_forme.count(forme)
         if occ >= seuil:
-            liste_fenetres_cand.append(fenetres_valides[i])
+            if forme in dico_fenetres_cand:
+                dico_fenetres_cand[forme] += [fenetres_valides[i]]
+            else:
+                dico_fenetres_cand[forme] = [fenetres_valides[i]]
         i += 1
-    return liste_fenetres_cand
+    return dico_fenetres_cand
    
 def recherche_expression(dico_etiquettes,candidats,schema):
     for candidat in candidats:
@@ -135,12 +136,13 @@ def recherche_expression(dico_etiquettes,candidats,schema):
             if fenetre_valide: #évite les erreur dûes à une fenetre valide vide.
                 fenetres_valides.append(fenetre_valide)
         if fenetres_valides != []:
-            liste_fenetres_cand = expression_repere_cand(fenetres_valides, seuil)
-            if liste_fenetres_cand != []:
-                new_cand, occurrence = utiles.new_cand(liste_fenetres_cand)
-                print('EXPRESSION TROUVEE : ', new_cand, ' ', occurrence)
-                for fenetre_cand in liste_fenetres_cand:
-                    utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
+            dico_fenetres_cand = expression_repere_cand(fenetres_valides, seuil)
+            if dico_fenetres_cand != {}:
+                for forme, liste_fenetres_cand in dico_fenetres_cand.items():
+                    new_cand, occurrence = utiles.new_cand(liste_fenetres_cand)
+                    print('EXPRESSION TROUVEE : ', new_cand, ' ', occurrence)
+                    for fenetre_cand in liste_fenetres_cand:
+                        utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
 
 ##################################################################
 # SIMPLE
