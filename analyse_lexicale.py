@@ -9,13 +9,8 @@ from math import *
 # EXPANSION
 ##################################################################
 
-def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_pattern):
-    fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
+def expansion_fenetre_valide(fenetres, mots_schema):
     fenetres_valides = []
-    liste_fenetres_cand = []
-    liste_forme = []
-    seuil = 2
-    i = 0
     for fenetre in fenetres:
         presence_schema = False
         for etiquette in fenetre:
@@ -30,57 +25,69 @@ def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_patte
             if (fenetre_propre[0][2] == 't' and fenetre_propre[2][2] == 't'):
                 fenetres_valides.append(fenetre[:pos_cand+1])
                 fenetres_valides.append(fenetre[pos_cand:])
+    return fenetres_valides
+    
+def expansion_recherche_cand(fenetres_valides, stopword_pattern):
+    liste_forme = []
+    dico_fenetres_cand = {}
+    seuil = 2
+    liste_t_norm = []
+    
     for possible_cand in fenetres_valides:
         forme = ''
         for etiquette in possible_cand:
-            if (etiquette[2] in ['t','v']):
-                forme += etiquette[1]
-            else:
+            if (etiquette[2] not in ['t','v']):
                 forme += etiquette[2]
-            forme += ' '
-        liste_forme.append(forme.strip())
-    # Vérification du dépassement de seuil
-    for forme1 in liste_forme:
-        occurrence = 0
-        # Compter le nombre d'occurence à l'égalité souple près
-        for forme2 in liste_forme:
-            if (utiles.egal_sple_chain(forme1,forme2, stopword_pattern)):
-                occurrence += 1
-        if ( (occurrence) >= seuil ):
-            liste_fenetres_cand.append(fenetres_valides[i])
-            print('EXPANSION TROUVEE : ', forme1, ' ', occurrence)
-        i += 1
-    # Changer les étiquettes dans le texte
-    liste_fenetres_cand_sans_indices = [utiles.fenetre_sans_indice(fenetre) for fenetre in liste_fenetres_cand]
-    for fenetre_cand in liste_fenetres_cand:
-        # Vérification de la présence d'une étiquette de candidat dans une unique fenêtre (les fenêtres étant tronquées autour des candidats)
-        # Si deux fenêtres se chevauchent avec le même candidat, prendre la forme qui a la plus grande occurrence
-        # Sinon, en choisir une au hasard
-        for etiquette in fenetre_cand:
-            if utiles.est_un_cand(etiquette):
-                cand = etiquette
-        for fenetre in liste_fenetres_cand:
-            # Détection d'un chevauchement
-            if (cand in fenetre and fenetre_cand != fenetre):
-                cand_fenetre_occ = liste_fenetres_cand_sans_indices.count(utiles.fenetre_sans_indice(fenetre_cand))
-                autre_fenetre_occ = liste_fenetres_cand_sans_indices.count(utiles.fenetre_sans_indice(fenetre))
-                if (cand_fenetre_occ >= autre_fenetre_occ):
-                    liste_fenetres_cand.pop(liste_fenetres_cand.index(fenetre))
+                forme += ' '
+            if (etiquette[2] == 't'):
+                if liste_t_norm == []:
+                    liste_t_norm.append(etiquette[1].lower())
+                    forme += etiquette[1].lower()
+                    forme += ' '
                 else:
-                    liste_fenetres_cand.pop(liste_fenetres_cand.index(fenetre_cand))
-    for fenetre_cand in liste_fenetres_cand:
-        # TODO prendre en compte les nouveaux candidats du type "terme + (n * v) + CAND" par exemple
-        # ex: labels et APPELLATIONS devient LABELS ET APPELLATIONS
-        new_forme = ''
-        for etiquette in fenetre_cand:
-            if (etiquette[2] in ['t','v']):
-                new_forme += etiquette[1]
-            else:
-                new_forme += etiquette[2]
-            new_forme += ' '
-        new_cand = new_forme
-        utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
-    return liste_fenetres_cand
+                    trouve = False
+                    for t_norm in liste_t_norm:
+                        if utiles.egal_sple_term(t_norm,etiquette[1]):
+                            forme += t_norm
+                            forme += ' '
+                            trouve = True
+                            break
+                    if trouve == False:
+                        liste_t_norm.append(etiquette[1].lower())
+                        forme += etiquette[1].lower()
+                        forme += ' '
+        liste_forme.append(forme.strip())
+        
+    # Construction d'un dictionnaire d'occurrences pour chaque forme
+    deja_vu = []
+    i = 0
+    for forme1 in liste_forme:
+        if forme1 not in dico_fenetres_cand:
+            dico_fenetres_cand[forme1] = [fenetres_valides[i]]
+        else:
+            dico_fenetres_cand[forme1] += [fenetres_valides[i]]
+        i += 1
+    
+    # Vérification du dépassement de seuil
+    dico_final = {}
+    for terme in dico_fenetres_cand:
+        if ( (len(dico_fenetres_cand[terme])) >= seuil ):
+            dico_final[terme] = dico_fenetres_cand[terme]
+    return dico_final
+
+
+def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_pattern):
+    fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
+    
+    fenetres_valides = expansion_fenetre_valide(fenetres, mots_schema)
+    dico_fenetres_cand = expansion_recherche_cand(fenetres_valides, stopword_pattern)
+        
+    # Changer les étiquettes dans le texte
+    for forme in dico_fenetres_cand:    
+        new_forme,occ = utiles.new_cand(dico_fenetres_cand[forme])
+        print('EXPANSION TROUVEE : ', new_forme, ' ', occ)
+        for fenetre_cand in dico_fenetres_cand[forme]:
+            utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_forme)
 
 ##################################################################
 # EXPRESSION

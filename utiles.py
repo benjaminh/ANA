@@ -148,17 +148,17 @@ def change_etiquette(dico, fenetre, new_cand):
     
     etiquette1 = fenetre[0]
     new_indice = etiquette1[0]
-    
-    for etiquette in fenetre:
-        indice = etiquette[0]
-        to_change = dico[indice]
-        new_string_list.append(to_change[0])
-        new_string = ' '.join(new_string_list)
-    dico[new_indice] = [new_string, new_cand] # remplace la première étiquette de la fenetre par le new_string et le new_cand
+    if new_indice in dico: # sinon une opération de change etiquette a déjà été effectuée pendant cette passe à cet indice.
+        for etiquette in fenetre:
+            indice = etiquette[0]
+            to_change = dico[indice]
+            new_string_list.append(to_change[0])
+            new_string = ' '.join(new_string_list)
+        dico[new_indice] = [new_string, new_cand] # remplace la première étiquette de la fenetre par le new_string et le new_cand
         
-    for etiquette in fenetre[1:]:
-        indice = etiquette[0]
-        del dico[indice] # supprime les autres indices dans le dico
+        for etiquette in fenetre[1:]:
+            indice = etiquette[0]
+            del dico[indice] # supprime les autres indices dans le dico
 
     
 #prend une fenetre d'étiquette et supprime tout les mots de la stoplist contenu dans cette fenetre. retourne une fenetre_sans_v (sans mots_schema)
@@ -223,9 +223,9 @@ def new_cand(liste_fenetres_cand):
                 forme += etiquette[1]
             forme += ' '
         liste_formes.append(forme.strip())
-    mostcommon = Counter(liste_formes).most_common(1) #mostcommon est une liste de 1 tuple [('forme', occurence)]
-    themostcommon = mostcommon[0]
-    return themostcommon #forme string et occurence de cette forme
+    new_cand = min(liste_formes, key=len).lower()
+    occurrence = len(liste_fenetres_cand)
+    return new_cand,occurrence #forme string et occurence de cette forme
 
 # tronque une fenetre après un certain nombre de mot non "v"
 def tronque_fenetre(fenetre, nombre_mots):
