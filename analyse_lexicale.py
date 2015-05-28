@@ -201,7 +201,7 @@ def dico_mots_trouves(fenetres_valides):
     return dico_final
     
 def simple_repere_cand(dico_t, seuil, schema):
-    liste_cand = []
+    dico_fenetres_cand = {}
     for t, fenetres in dico_t.items():
         compt_s1 = 0 #Meme mot schema et même CAND
         compt_s2 = 0 #Meme mot schema et CAND differents
@@ -225,9 +225,9 @@ def simple_repere_cand(dico_t, seuil, schema):
                 elif mot_schema[1] != mot_schema1[1] and cand[2] != cand1[2]:
                     compt_s4 += 1
         if compt_s1 >= seuil[0] or compt_s2 >= seuil[1] or compt_s3 >= seuil[2] or compt_s4 >= seuil[3]:
-            liste_cand.append(t)
-            print("SIMPLE TROUVE : ", t , ' ', compt_s1, compt_s2, compt_s3, compt_s4)
-    return liste_cand
+            dico_fenetres_cand[t] = fenetres
+    return dico_fenetres_cand
+    
 
 #doit retourner la fenetre tronquée valide contenant un mot (non CAND) lié à un CAND par un mot schéma (après ce CAND) ou none si ne trouve rien. 
 def simple_fenetre_valide(fenetre, schema):
@@ -253,7 +253,14 @@ def recherche_simple(dico_etiquettes, candidats, schema, seuil):
             fenetreR = utiles.symetrique_fenetre(fenetre)
             fenetre_valideR = simple_fenetre_valide(fenetreR,schema)
             if fenetre_valideR:
-                fenetres_valides.append(fenetre_valideR)
+                fenetre_valide = utiles.symetrique_fenetre(fenetre_valideR)
+                fenetres_valides.append(fenetre_valide)
             
     dico_t = dico_mots_trouves(fenetres_valides)
-    liste_cand = simple_repere_cand(dico_t,seuil,schema)
+    dico_fenetres_cand = simple_repere_cand(dico_t,seuil,schema)
+    if dico_fenetres_cand != {}:
+        for forme, liste_fenetres_cand in dico_fenetres_cand.items():
+            new_cand, occurrence = utiles.new_cand(liste_fenetres_cand)
+            print('SIMPLE TROUVE : ', new_cand, ' ', occurrence)
+            for fenetre_cand in liste_fenetres_cand:
+                utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
