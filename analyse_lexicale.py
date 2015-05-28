@@ -82,11 +82,11 @@ def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_patte
     dico_fenetres_cand = expansion_recherche_cand(fenetres_valides, stopword_pattern, seuil)
         
     # Changer les étiquettes dans le texte
-    for forme in dico_fenetres_cand:    
+    for forme in dico_fenetres_cand:
         new_cand,occ = utiles.new_cand(dico_fenetres_cand[forme])
         utiles.ecrire_log(log_file_path, 'EXPANSION TROUVEE', new_cand, occ)
         for fenetre_cand in dico_fenetres_cand[forme]:
-            utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
+            utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand, log_file_path)
 
 ##################################################################
 # EXPRESSION
@@ -148,7 +148,7 @@ def recherche_expression(dico_etiquettes,candidats,schema, seuil, log_file_path)
                     new_cand, occ = utiles.new_cand(liste_fenetres_cand)
                     utiles.ecrire_log(log_file_path, 'EXPRESSION TROUVEE', new_cand, occ)
                     for fenetre_cand in liste_fenetres_cand:
-                        utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
+                        utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand, log_file_path)
 
 ##################################################################
 # SIMPLE
@@ -207,36 +207,35 @@ def dico_mots_trouves(fenetres_valides):
 def simple_repere_cand(dico_t, seuil, schema):
     dico_etiquettes_cand = {}
     for forme, fenetres in dico_t.items():
-        compt_s1 = 0 #Meme mot schema et même CAND
-        compt_s2 = 0 #Meme mot schema et CAND differents
-        compt_s3 = 0 #Mot schema different et même CAND
-        compt_s4 = 0 #Mot schema different et CAND different
         for fenetre in fenetres:
+            compt_s1 = 0 #Meme mot schema et même CAND
+            compt_s2 = 0 #Meme mot schema et CAND differents
+            compt_s3 = 0 #Mot schema different et même CAND
+            compt_s4 = 0 #Mot schema different et CAND different
             mot_schema = utiles.quel_schema(fenetre, schema)
             cand = utiles.quel_cand(fenetre)
             
             for fenetre1 in fenetres:
                 mot_schema1 = utiles.quel_schema(fenetre1, schema)
                 cand1 = utiles.quel_cand(fenetre1)
-                #print(t,mot_schema,mot_schema1,cand,cand1)
                 # TODO supprimer les doublons
-                if mot_schema[1] == mot_schema1[1] and cand[2] == cand1[2]:
-                    compt_s1 += 1
-                elif mot_schema[1] == mot_schema1[1] and cand[2] != cand1[2]:
-                    compt_s2 += 1
-                elif mot_schema[1] != mot_schema1[1] and cand[2] == cand1[2]:
-                    compt_s3 += 1
-                elif mot_schema[1] != mot_schema1[1] and cand[2] != cand1[2]:
-                    compt_s4 += 1
-        if compt_s1 >= seuil[0] or compt_s2 >= seuil[1] or compt_s3 >= seuil[2] or compt_s4 >= seuil[3]:
-            for fenetre in fenetres: 
-                for etiquette in fenetre:  
-                    if etiquette[2] == 't':
-                        if forme in dico_etiquettes_cand:
-                            dico_etiquettes_cand[forme].append(etiquette)
-                        else:
-                            dico_etiquettes_cand[forme] = [etiquette]
-                       
+                if fenetre1 != fenetre:
+                    if mot_schema[1] == mot_schema1[1] and cand[2] == cand1[2]:
+                        compt_s1 += 1
+                    elif mot_schema[1] == mot_schema1[1] and cand[2] != cand1[2]:
+                        compt_s2 += 1
+                    elif mot_schema[1] != mot_schema1[1] and cand[2] == cand1[2]:
+                        compt_s3 += 1
+                    elif mot_schema[1] != mot_schema1[1] and cand[2] != cand1[2]:
+                        compt_s4 += 1
+            if compt_s1 >= seuil[0] or compt_s2 >= seuil[1] or compt_s3 >= seuil[2] or compt_s4 >= seuil[3]:
+                for fenetre in fenetres: 
+                    for etiquette in fenetre:  
+                        if etiquette[2] == 't':
+                            if forme in dico_etiquettes_cand:
+                                dico_etiquettes_cand[forme].append(etiquette)
+                            else:
+                                dico_etiquettes_cand[forme] = [etiquette]
     return dico_etiquettes_cand
     
 
@@ -266,12 +265,12 @@ def recherche_simple(dico_etiquettes, candidats, schema, seuil, log_file_path):
             if fenetre_valideR:
                 fenetre_valide = utiles.symetrique_fenetre(fenetre_valideR)
                 fenetres_valides.append(fenetre_valide)
-            
+                    
     dico_t = dico_mots_trouves(fenetres_valides)
     dico_etiquettes_cand = simple_repere_cand(dico_t, seuil, schema)
     if dico_etiquettes_cand != {}:
         for forme, liste_etiquettes_cand in dico_etiquettes_cand.items():
             new_cand,occ = utiles.new_cand_simple(liste_etiquettes_cand)
             utiles.ecrire_log(log_file_path, 'SIMPLE TROUVE', new_cand, occ)
-            for etiquette_cand in liste_etiquettes_cand:
-                utiles.change_etiquette(dico_etiquettes, etiquette_cand, new_cand)
+            etiquette_cand = liste_etiquettes_cand[0] #cela sert juste à savoir que le parametre que l'on envoie dans la fonction change etiquette est une etiquette simple et pas une fenetre (composée d'étiquettes). Le contenu de cette variable est de la forme d'une etiquette, qu'importe le contenu.
+            utiles.change_etiquette(dico_etiquettes, etiquette_cand, new_cand, log_file_path)

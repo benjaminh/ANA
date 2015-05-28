@@ -54,7 +54,7 @@ def egal_sple_term(mot1, mot2):
     if mot1 != '' and mot2 != '':
         mot1 = supprime_accent(mot1.lower())
         mot2 = supprime_accent(mot2.lower())
-        if ((mot1 == mot2) or (mot1 == mot2 + 's') or (mot1 == mot2 + 's')):
+        if ((mot1 == mot2) or (mot2 == mot1 + 's') or (mot1 == mot2 + 's') or (mot2 == mot1 + 'e') or (mot1 == mot2 + 'e') or (mot1 == mot2 + 'es') or (mot2 == mot1 + 'es')):
             souple = True
         elif mot2[0] != mot1[0]:
             souple = False
@@ -159,7 +159,7 @@ def defini_fenetres(dico, liste_CAND, W, w):
                 fenetres.append(fenetre)  #met la fenetre dans la liste des fenetres recherchées.
     return fenetres
 
-def change_etiquette(dico, fenetre, new_cand):
+def change_etiquette(dico, fenetre, new_cand, log_file_path):
     '''
     new_cand est une chaîne de caractères normalisée en fonction des cas:
     - expression
@@ -167,9 +167,15 @@ def change_etiquette(dico, fenetre, new_cand):
     - simple
     '''
     new_string_list = []
+    # Vérifier si l'on est dans le cas d'une fenetre (expansion, expression)
+    # ou d'une étiquette (simple)
     if isinstance( fenetre[0], int ):
         etiquette = fenetre
         dico[etiquette[0]] = [etiquette[1], new_cand]
+        for indice,value in dico.items():
+            if (value[1] == 't' and egal_sple_term(value[0],new_cand)): #Pour éviter de changer des 'v' comme 'il' en candidat comme 'île'
+                dico[indice][1] = new_cand
+#                ecrire_log(log_file_path, "ETIQUETTE SIMPLE CHANGEE", new_cand, indice)
         
     else:
         fenetre.sort(key=lambda x: x[0]) #trie les étiquette de la fenetre par ordre d'indice croissant . au cas où
@@ -177,13 +183,14 @@ def change_etiquette(dico, fenetre, new_cand):
         etiquette1 = fenetre[0]
         new_indice = etiquette1[0]
         if new_indice in dico: # sinon une opération de change etiquette a déjà été effectuée pendant cette passe à cet indice.
+
             for etiquette in fenetre:
                 indice = etiquette[0]
                 to_change = dico[indice]
                 new_string_list.append(to_change[0])
                 new_string = ' '.join(new_string_list)
             dico[new_indice] = [new_string, new_cand] # remplace la première étiquette de la fenetre par le new_string et le new_cand
-            
+#            ecrire_log(log_file_path, "ETIQUETTE CHANGEE", new_cand, new_indice)
             for etiquette in fenetre[1:]:
                 indice = etiquette[0]
                 del dico[indice] # supprime les autres indices dans le dico
@@ -296,7 +303,7 @@ def recession(dico_etiquettes, seuil, log_file_path):
                 clef_replace = clef 
                 for vieille_etiq in vieilles_etiq:
                     dico_etiquettes[clef_replace] = [vieille_etiq, 't']
-                    ecrire_log(log_file_path, 'MOT REMPLACE', dico_etiquettes[clef_replace], clef_replace)
+#                    ecrire_log(log_file_path, 'MOT REMPLACE', dico_etiquettes[clef_replace], clef_replace)
                     clef_replace += 1
     return cands
     

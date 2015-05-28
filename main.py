@@ -16,6 +16,7 @@ else:
 stopword_file_path = 'test/stoplist_Fr.txt'
 bootstrap_file_path = 'test/bootstrap'
 schema_file_path = 'test/schema'
+log_file_path = 'test/log'
 stopword_pattern = utiles.stopword_regex(stopword_file_path)
 etiq_text = utiles.etiquette_texte(txt_file_path, stopword_file_path, bootstrap_file_path)
 
@@ -26,6 +27,7 @@ print('BOOTSTRAP : ',cands)
 
 with open(schema_file_path, 'r', encoding = 'utf8') as fichierschema:
     mots_schema = utiles.construit_liste(fichierschema)
+    
 ########################################################################
 
 
@@ -42,29 +44,18 @@ seuil_expression = 3
 seuil_recession = min(seuil_expansion, seuil_expression, min(seuil_simple))
 #########################################################################
 
-i = 0
-while i < 15:
-    analyse_lexicale.recherche_simple(etiq_text, cands, mots_schema, seuil_simple)
-    cands = utiles.recession(etiq_text, seuil_recession)
-    i += 1
-print(cands)  
-   
-i = 0
-while i < 10:
-    analyse_lexicale.recherche_expansion(etiq_text, cands, mots_schema, stopword_pattern, seuil_expansion)
-    cands = utiles.recession(etiq_text, seuil_recession)
-    i += 1
-print(cands) 
+with open(log_file_path, 'w', encoding = 'utf8') as log_file:
+    log_file.write("FICHIER LOG\n")
 
 i = 0
-while i < 5:
-    analyse_lexicale.recherche_expression(etiq_text, cands, mots_schema, seuil_expression)
-    cands = utiles.recession(etiq_text, seuil_recession)
+while i < 10:
+    analyse_lexicale.recherche_simple(etiq_text, cands, mots_schema, seuil_simple, log_file_path)
+    cands = utiles.recession(etiq_text, seuil_recession, log_file_path)
+    analyse_lexicale.recherche_expansion(etiq_text, cands, mots_schema, stopword_pattern, seuil_expansion, log_file_path)
+    cands = utiles.recession(etiq_text, seuil_recession, log_file_path)
+    analyse_lexicale.recherche_expression(etiq_text, cands, mots_schema, seuil_expression, log_file_path)
+    cands = utiles.recession(etiq_text, seuil_recession, log_file_path)
     i += 1
+
 print(cands)
- 
-    
-print(cands)
-with open('sortie.txt', 'w', encoding = 'utf8') as sortie:
-    sortie.write(str(etiq_text))
 
