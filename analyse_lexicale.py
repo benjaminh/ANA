@@ -27,10 +27,9 @@ def expansion_fenetre_valide(fenetres, mots_schema):
                 fenetres_valides.append(fenetre[pos_cand:])
     return fenetres_valides
     
-def expansion_recherche_cand(fenetres_valides, stopword_pattern):
+def expansion_recherche_cand(fenetres_valides, stopword_pattern, seuil):
     liste_forme = []
     dico_fenetres_cand = {}
-    seuil = 2
     liste_t_norm = []
     
     for possible_cand in fenetres_valides:
@@ -76,16 +75,16 @@ def expansion_recherche_cand(fenetres_valides, stopword_pattern):
     return dico_final
 
 
-def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_pattern):
+def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_pattern, seuil):
     fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
     
     fenetres_valides = expansion_fenetre_valide(fenetres, mots_schema)
-    dico_fenetres_cand = expansion_recherche_cand(fenetres_valides, stopword_pattern)
+    dico_fenetres_cand = expansion_recherche_cand(fenetres_valides, stopword_pattern, seuil)
         
     # Changer les étiquettes dans le texte
     for forme in dico_fenetres_cand:    
         new_forme,occ = utiles.new_cand(dico_fenetres_cand[forme])
-        print('EXPANSION TROUVEE : ', new_forme, ' ', occ)
+        #print('EXPANSION TROUVEE : ', new_forme, ' ', occ)
         for fenetre_cand in dico_fenetres_cand[forme]:
             utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_forme)
 
@@ -131,13 +130,13 @@ def expression_repere_cand(fenetres_valides, seuil):
         i += 1
     return dico_fenetres_cand
    
-def recherche_expression(dico_etiquettes,candidats,schema):
+def recherche_expression(dico_etiquettes,candidats,schema, seuil):
     for candidat in candidats:
         candidat = [candidat]
         fenetres = utiles.defini_fenetres(dico_etiquettes,candidat,3,1) #fenetre du type `CAND1 + (cand ou mot quelconque) + (cand ou mot quelconque)`. Les mots stop ("v") ne sont pas représentés
         fenetres_valides = []
         liste_fenetres_cand = []
-        seuil = 2
+        
         for fenetre in fenetres:
             fenetre_valide = expression_fenetre_valide(fenetre,candidat,schema)
             if fenetre_valide: #évite les erreur dûes à une fenetre valide vide.
@@ -147,7 +146,7 @@ def recherche_expression(dico_etiquettes,candidats,schema):
             if dico_fenetres_cand != {}:
                 for forme, liste_fenetres_cand in dico_fenetres_cand.items():
                     new_cand, occurrence = utiles.new_cand(liste_fenetres_cand)
-                    print('EXPRESSION TROUVEE : ', new_cand, ' ', occurrence)
+                    #print('EXPRESSION TROUVEE : ', new_cand, ' ', occurrence)
                     for fenetre_cand in liste_fenetres_cand:
                         utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
 
@@ -209,11 +208,11 @@ def simple_repere_cand(dico_t, seuil, schema):
         compt_s3 = 0 #Mot schema different et même CAND
         compt_s4 = 0 #Mot schema different et CAND different
         for fenetre in fenetres:
-            mot_schema = utiles.quel_schema(fenetre,schema)
+            mot_schema = utiles.quel_schema(fenetre, schema)
             cand = utiles.quel_cand(fenetre)
             
             for fenetre1 in fenetres:
-                mot_schema1 = utiles.quel_schema(fenetre1,schema)
+                mot_schema1 = utiles.quel_schema(fenetre1, schema)
                 cand1 = utiles.quel_cand(fenetre1)
                 #print(t,mot_schema,mot_schema1,cand,cand1)
                 # TODO supprimer les doublons
@@ -227,13 +226,11 @@ def simple_repere_cand(dico_t, seuil, schema):
                     compt_s4 += 1
         if compt_s1 >= seuil[0] or compt_s2 >= seuil[1] or compt_s3 >= seuil[2] or compt_s4 >= seuil[3]:
             liste_cand.append(t)
-            print("SIMPLE TROUVE : ", t , ' ', compt_s1,compt_s2,compt_s3,compt_s4)
-#        else:
-#            print("SIMPLE PAS TROUVE : ", t , ' ', compt_s1,compt_s2,compt_s3,compt_s4)
+            print("SIMPLE TROUVE : ", t , ' ', compt_s1, compt_s2, compt_s3, compt_s4)
     return liste_cand
 
 #doit retourner la fenetre tronquée valide contenant un mot (non CAND) lié à un CAND par un mot schéma (après ce CAND) ou none si ne trouve rien. 
-def simple_fenetre_valide(fenetre,schema):
+def simple_fenetre_valide(fenetre, schema):
     if utiles.schema_present(fenetre, schema):
         for etiquette in fenetre:
             index_cand = 0
@@ -244,11 +241,10 @@ def simple_fenetre_valide(fenetre,schema):
         if utiles.compte_cand(fenetre_droite) < 2 and utiles.schema_present(fenetre_droite, schema):
             return fenetre_droite
 
-def recherche_simple(dico_etiquettes,candidats,schema):
+def recherche_simple(dico_etiquettes, candidats, schema, seuil):
     fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
     fenetres_valides = []
     liste_fenetres_cand = []
-    seuil = [3,5,5,10]
     for fenetre in fenetres:
         fenetre_valide = simple_fenetre_valide(fenetre,schema)
         if fenetre_valide:

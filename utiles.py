@@ -10,6 +10,21 @@ from collections import Counter
 #paramètre globaux ou initialisation#############################
 seuil_egal_sple = 8
 
+#supprime l''accent de la première lettre du mot
+def supprime_accent(mot_lower):
+    accent = ['é', 'è', 'ê', 'ë', 'ù', 'û', 'ü', 'ç', 'ô', 'ö', 'œ', 'î', 'ï', 'â', 'à', 'ä']
+    sans_accent = ['e', 'e', 'e', 'e', 'u', 'u', 'u', 'c', 'o', 'o', 'oe', 'i', 'i', 'a', 'a', 'a']
+    mot = ''
+    premiere_lettre = mot_lower[0]
+    mot_lower2 = mot_lower[1:]
+    if premiere_lettre in accent:
+        index = accent.index(premiere_lettre)
+        premiere_lettre = premiere_lettre.replace(accent[index], sans_accent[index])
+        if premiere_lettre in accent:
+            print('ERREUR', premiere_lettre)
+    mot = premiere_lettre + mot_lower2
+    return mot
+
 #construit une regex de tous les stopWords
 def stopword_regex(stopword_file_path):
     with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
@@ -22,9 +37,7 @@ def stopword_regex(stopword_file_path):
 
 # attention div#0 si mot1 == mot2
 # utilisé pour egal_souple_term
-def prox(motA, motB):
-    mot1 = motA.lower()
-    mot2 = motB.lower()
+def prox(mot1, mot2):
     totleng = len(mot1) + len(mot2)
     dist = distance.levenshtein(mot1, mot2)
     proxim = totleng / (seuil_egal_sple* dist)
@@ -33,12 +46,17 @@ def prox(motA, motB):
 #Prend 2 termes et retourne un booléen. Permet de définir si 2 termes sont égaux, en calculant une proximité entre eux. Un seuil de flexibilité est défini. ne tient pas compte des majuscules mais des accent oui. 
 def egal_sple_term(mot1, mot2):
     souple = False
-    if ((mot1.lower() == mot2.lower()) or (mot1.lower() == mot2.lower() + 's') or (mot1.lower() == mot2.lower() + 's')):
-        souple = True
-    else:
-        proximite = prox(mot1, mot2)
-        if proximite > 1:
+    if mot1 != '' and mot2 != '':
+        mot1 = supprime_accent(mot1.lower())
+        mot2 = supprime_accent(mot2.lower())
+        if ((mot1 == mot2) or (mot1 == mot2 + 's') or (mot1 == mot2 + 's')):
             souple = True
+        elif mot2[0] != mot1[0]:
+            souple = False
+        else:
+            proximite = prox(mot1, mot2)
+            if proximite > 1:
+                souple = True
     return souple
 
 #Prend 2 chaînes et retourne un booléen. Permet de définir si 2 chaînes sont égales. Retire les mots de la `stoplist` contenu dans les chaïnes. Calcul la sommes des proximités des paires de mots (chaine A, chaine B contiennent les paires A1 B1; A2 B2; A3 B3).
@@ -240,7 +258,31 @@ def tronque_fenetre(fenetre, nombre_mots):
             break
     return tronque
 
-
+def recession(dico_etiquettes, seuil):
+    cands = []
+    dico_cand = {}
+    for clef, valeur in dico_etiquettes.items():
+        if valeur[1] not in ['v', 't']:
+            if valeur[1] in dico_cand:
+                dico_cand[valeur[1]].append(clef)
+            else:
+                dico_cand[valeur[1]] = [clef]
+    for candidat, clefs in dico_cand.items():
+        if len(clefs) >= seuil:
+            cands.append(candidat)
+        else: #supprime ce CAND et redécompose en étiquettes marquées 't'
+            for clef in clefs:
+                print("MOT SUPPRIME",dico_etiquettes[clef][0],clefs)
+                #recupère le texte contenu dans cette etiquette CAND à supprimer
+                vieilles_etiq = dico_etiquettes[clef][0]
+                vieilles_etiq = vieilles_etiq.split() #liste de mots du texte contenu dans l'étiquette CAND
+                clef_replace = clef 
+                for vieille_etiq in vieilles_etiq:
+                    dico_etiquettes[clef_replace] = [vieille_etiq, 't']
+                    print("MOT REPLACE", dico_etiquettes[clef_replace], clef_replace)
+                    clef_replace += 1
+    return cands
+    
 #p145 mais en différent! Pour modifier les étiquettes sans que les 3 modes de découverte de nouveau CAND se bousculent
 #def heuristique(newcand_et_liste_fenetre_cand)
     
