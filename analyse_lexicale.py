@@ -75,7 +75,7 @@ def expansion_recherche_cand(fenetres_valides, stopword_pattern, seuil):
     return dico_final
 
 
-def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_pattern, seuil):
+def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_pattern, seuil, log_file_path):
     fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
     
     fenetres_valides = expansion_fenetre_valide(fenetres, mots_schema)
@@ -83,10 +83,10 @@ def recherche_expansion(dico_etiquettes, candidats , mots_schema, stopword_patte
         
     # Changer les étiquettes dans le texte
     for forme in dico_fenetres_cand:    
-        new_forme,occ = utiles.new_cand(dico_fenetres_cand[forme])
-        #print('EXPANSION TROUVEE : ', new_forme, ' ', occ)
+        new_cand,occ = utiles.new_cand(dico_fenetres_cand[forme])
+        utiles.ecrire_log(log_file_path, 'EXPANSION TROUVEE', new_cand, occ)
         for fenetre_cand in dico_fenetres_cand[forme]:
-            utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_forme)
+            utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
 
 ##################################################################
 # EXPRESSION
@@ -130,7 +130,7 @@ def expression_repere_cand(fenetres_valides, seuil):
         i += 1
     return dico_fenetres_cand
    
-def recherche_expression(dico_etiquettes,candidats,schema, seuil):
+def recherche_expression(dico_etiquettes,candidats,schema, seuil, log_file_path):
     for candidat in candidats:
         candidat = [candidat]
         fenetres = utiles.defini_fenetres(dico_etiquettes,candidat,3,1) #fenetre du type `CAND1 + (cand ou mot quelconque) + (cand ou mot quelconque)`. Les mots stop ("v") ne sont pas représentés
@@ -145,8 +145,8 @@ def recherche_expression(dico_etiquettes,candidats,schema, seuil):
             dico_fenetres_cand = expression_repere_cand(fenetres_valides, seuil)
             if dico_fenetres_cand != {}:
                 for forme, liste_fenetres_cand in dico_fenetres_cand.items():
-                    new_cand, occurrence = utiles.new_cand(liste_fenetres_cand)
-                    #print('EXPRESSION TROUVEE : ', new_cand, ' ', occurrence)
+                    new_cand, occ = utiles.new_cand(liste_fenetres_cand)
+                    utiles.ecrire_log(log_file_path, 'EXPRESSION TROUVEE', new_cand, occ)
                     for fenetre_cand in liste_fenetres_cand:
                         utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
 
@@ -157,7 +157,7 @@ def recherche_expression(dico_etiquettes,candidats,schema, seuil):
 #on cherche des mots rattachés à n'importe quel candidat par un mot de schéma. ex: couleurs de FLEUR, couleur de MUR, colleur de CARTON (c'est un exemple problematique)
 # -> captera couleur. 
 
-#fait une liste de tous les mots trouvés (modulo une égalité souple)
+#fait un dico de tous les mots trouvés (modulo une égalité souple)
 def dico_mots_trouves(fenetres_valides):
     dico_t = {}
     # On ne peut pas modifier au fil de l'eau un dict sur lequel on itère
@@ -167,9 +167,10 @@ def dico_mots_trouves(fenetres_valides):
         for etiquette in fenetre: #a priori il n'y a qu'un seul t dans chaque fenetre'
             if etiquette[2] == 't':
                 if etiquette[1] in dico_t:
-                    dico_t[etiquette[1]].extend([fenetre])
+                    dico_t[etiquette[1]].extend([fenetre]) # on garde toute la fenetre pour vérifier les différents seuils pour chaque clef.
                 else:
                     dico_t[etiquette[1]] = [fenetre]
+                    
     # On nettoie le dico en utilisant l'égalité souple
     dico_t_2 = {}
     deja_fait = []
@@ -180,7 +181,10 @@ def dico_mots_trouves(fenetres_valides):
                 if t != t2 and utiles.egal_sple_term(t, t2):
                     dico_t_2[t].extend(dico_t[t2])
                     deja_fait.append(t2)
-
+                    
+    # trouve la forme collectant le plus d'occurence parmis toutes les formes en égalité souple.
+    # comme pour ranger une liste, on a un tampon qui stocke la forme rattachée au plus d'occurrence.
+    # dico final est donc de la même forme que dico_t ou dico_t_2, à savoir, {'mot quelconque': [fenetres_valides]}
     dico_final = {}
     for t in dico_t_2.keys():
         tampon = {}
@@ -201,8 +205,8 @@ def dico_mots_trouves(fenetres_valides):
     return dico_final
     
 def simple_repere_cand(dico_t, seuil, schema):
-    dico_fenetres_cand = {}
-    for t, fenetres in dico_t.items():
+    dico_etiquettes_cand = {}
+    for forme, fenetres in dico_t.items():
         compt_s1 = 0 #Meme mot schema et même CAND
         compt_s2 = 0 #Meme mot schema et CAND differents
         compt_s3 = 0 #Mot schema different et même CAND
@@ -225,8 +229,15 @@ def simple_repere_cand(dico_t, seuil, schema):
                 elif mot_schema[1] != mot_schema1[1] and cand[2] != cand1[2]:
                     compt_s4 += 1
         if compt_s1 >= seuil[0] or compt_s2 >= seuil[1] or compt_s3 >= seuil[2] or compt_s4 >= seuil[3]:
-            dico_fenetres_cand[t] = fenetres
-    return dico_fenetres_cand
+            for fenetre in fenetres: 
+                for etiquette in fenetre:  
+                    if etiquette[2] == 't':
+                        if forme in dico_etiquettes_cand:
+                            dico_etiquettes_cand[forme].append(etiquette)
+                        else:
+                            dico_etiquettes_cand[forme] = [etiquette]
+                       
+    return dico_etiquettes_cand
     
 
 #doit retourner la fenetre tronquée valide contenant un mot (non CAND) lié à un CAND par un mot schéma (après ce CAND) ou none si ne trouve rien. 
@@ -241,8 +252,8 @@ def simple_fenetre_valide(fenetre, schema):
         if utiles.compte_cand(fenetre_droite) < 2 and utiles.schema_present(fenetre_droite, schema):
             return fenetre_droite
 
-def recherche_simple(dico_etiquettes, candidats, schema, seuil):
-    fenetres = utiles.defini_fenetres(dico_etiquettes,candidats,3,2)
+def recherche_simple(dico_etiquettes, candidats, schema, seuil, log_file_path):
+    fenetres = utiles.defini_fenetres(dico_etiquettes, candidats, 3, 2)
     fenetres_valides = []
     liste_fenetres_cand = []
     for fenetre in fenetres:
@@ -257,10 +268,10 @@ def recherche_simple(dico_etiquettes, candidats, schema, seuil):
                 fenetres_valides.append(fenetre_valide)
             
     dico_t = dico_mots_trouves(fenetres_valides)
-    dico_fenetres_cand = simple_repere_cand(dico_t,seuil,schema)
-    if dico_fenetres_cand != {}:
-        for forme, liste_fenetres_cand in dico_fenetres_cand.items():
-            new_cand, occurrence = utiles.new_cand(liste_fenetres_cand)
-            print('SIMPLE TROUVE : ', new_cand, ' ', occurrence)
-            for fenetre_cand in liste_fenetres_cand:
-                utiles.change_etiquette(dico_etiquettes, fenetre_cand, new_cand)
+    dico_etiquettes_cand = simple_repere_cand(dico_t, seuil, schema)
+    if dico_etiquettes_cand != {}:
+        for forme, liste_etiquettes_cand in dico_etiquettes_cand.items():
+            new_cand,occ = utiles.new_cand_simple(liste_etiquettes_cand)
+            utiles.ecrire_log(log_file_path, 'SIMPLE TROUVE', new_cand, occ)
+            for etiquette_cand in liste_etiquettes_cand:
+                utiles.change_etiquette(dico_etiquettes, etiquette_cand, new_cand)

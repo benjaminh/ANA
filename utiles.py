@@ -10,6 +10,11 @@ from collections import Counter
 #paramètre globaux ou initialisation#############################
 seuil_egal_sple = 8
 
+#ecrire log
+def ecrire_log(log_file_path, indication, new_forme, occ):
+    with open(log_file_path, 'a', encoding = 'utf8') as sortie:
+        sortie.write(indication + ' ' + str(new_forme) + ' '+ str(occ) + '\n')
+
 #supprime l''accent de la première lettre du mot
 def supprime_accent(mot_lower):
     accent = ['é', 'è', 'ê', 'ë', 'ù', 'û', 'ü', 'ç', 'ô', 'ö', 'œ', 'î', 'ï', 'â', 'à', 'ä']
@@ -162,23 +167,27 @@ def change_etiquette(dico, fenetre, new_cand):
     - simple
     '''
     new_string_list = []
-    fenetre.sort(key=lambda x: x[0]) #trie les étiquette de la fenetre par ordre d'indice croissant . au cas où
-    
-    etiquette1 = fenetre[0]
-    new_indice = etiquette1[0]
-    if new_indice in dico: # sinon une opération de change etiquette a déjà été effectuée pendant cette passe à cet indice.
-        for etiquette in fenetre:
-            indice = etiquette[0]
-            to_change = dico[indice]
-            new_string_list.append(to_change[0])
-            new_string = ' '.join(new_string_list)
-        dico[new_indice] = [new_string, new_cand] # remplace la première étiquette de la fenetre par le new_string et le new_cand
+    if isinstance( fenetre[0], int ):
+        etiquette = fenetre
+        dico[etiquette[0]] = [etiquette[1], new_cand]
         
-        for etiquette in fenetre[1:]:
-            indice = etiquette[0]
-            del dico[indice] # supprime les autres indices dans le dico
-
-    
+    else:
+        fenetre.sort(key=lambda x: x[0]) #trie les étiquette de la fenetre par ordre d'indice croissant . au cas où
+        
+        etiquette1 = fenetre[0]
+        new_indice = etiquette1[0]
+        if new_indice in dico: # sinon une opération de change etiquette a déjà été effectuée pendant cette passe à cet indice.
+            for etiquette in fenetre:
+                indice = etiquette[0]
+                to_change = dico[indice]
+                new_string_list.append(to_change[0])
+                new_string = ' '.join(new_string_list)
+            dico[new_indice] = [new_string, new_cand] # remplace la première étiquette de la fenetre par le new_string et le new_cand
+            
+            for etiquette in fenetre[1:]:
+                indice = etiquette[0]
+                del dico[indice] # supprime les autres indices dans le dico
+        
 #prend une fenetre d'étiquette et supprime tout les mots de la stoplist contenu dans cette fenetre. retourne une fenetre_sans_v (sans mots_schema)
 #pas pour opérer mais pour faire des vérification de fenetres valides
 def fenetre_sans_v(fenetre):
@@ -245,6 +254,14 @@ def new_cand(liste_fenetres_cand):
     occurrence = len(liste_fenetres_cand)
     return new_cand,occurrence #forme string et occurence de cette forme
 
+def new_cand_simple(liste_etiquettes_cand):
+    liste_formes = []
+    for etiquette in liste_etiquettes_cand:
+        liste_formes.append(etiquette[1].strip())
+    new_cand = min(liste_formes, key=len).lower()
+    occurrence = len(liste_etiquettes_cand)
+    return new_cand,occurrence #forme string et occurence de cette forme
+
 # tronque une fenetre après un certain nombre de mot non "v"
 def tronque_fenetre(fenetre, nombre_mots):
     compteur = 0
@@ -258,7 +275,7 @@ def tronque_fenetre(fenetre, nombre_mots):
             break
     return tronque
 
-def recession(dico_etiquettes, seuil):
+def recession(dico_etiquettes, seuil, log_file_path):
     cands = []
     dico_cand = {}
     for clef, valeur in dico_etiquettes.items():
@@ -272,14 +289,14 @@ def recession(dico_etiquettes, seuil):
             cands.append(candidat)
         else: #supprime ce CAND et redécompose en étiquettes marquées 't'
             for clef in clefs:
-                print("MOT SUPPRIME",dico_etiquettes[clef][0],clefs)
+                ecrire_log(log_file_path, 'MOT SUPPRIME', dico_etiquettes[clef][0], clefs)
                 #recupère le texte contenu dans cette etiquette CAND à supprimer
                 vieilles_etiq = dico_etiquettes[clef][0]
                 vieilles_etiq = vieilles_etiq.split() #liste de mots du texte contenu dans l'étiquette CAND
                 clef_replace = clef 
                 for vieille_etiq in vieilles_etiq:
                     dico_etiquettes[clef_replace] = [vieille_etiq, 't']
-                    print("MOT REPLACE", dico_etiquettes[clef_replace], clef_replace)
+                    ecrire_log(log_file_path, 'MOT REMPLACE', dico_etiquettes[clef_replace], clef_replace)
                     clef_replace += 1
     return cands
     
