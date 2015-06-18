@@ -11,9 +11,9 @@ from collections import Counter
 seuil_egal_sple = 8
 
 #ecrire log
-def write_log(log_file_path, indication, new_shortshape, occ_count):
+def write_log(log_file_path, indication):
     with open(log_file_path, 'a', encoding = 'utf8') as logfile:
-        logfile.write(indication + ' ' + str(new_shortshape) + ' '+ str(occ_count) + '\n')
+        logfile.write(indication + '\n')
 
 #supprime l''accent de la première lettre du mot
 #pas pour un problème d'encodage, mais pour un pb humain: les erreurs de "lettre non-accentué" en majuscule sont fréquentes. on veut : Île = Ile.
@@ -87,7 +87,7 @@ def egal_sple_chain(string1, string2, stopword_pattern):
         souple = False
     else:
         for word in st1:
-            if not egal_sple_term(st2[st1.index(mot)], word):
+            if not egal_sple_term(st2[st1.index(word)], word):
                 souple = False
     return souple
 
@@ -169,6 +169,7 @@ def admission(dict_occ_ref, window, new_cand, log_file_path):
     - simple
     '''
     new_string_list = []
+    
     # Vérifier si l'on est dans le cas d'une window (expansion, expression)
     # ou d'une étiquette (simple)
     if isinstance( window[0], int ):
@@ -180,12 +181,12 @@ def admission(dict_occ_ref, window, new_cand, log_file_path):
 #                write_log(log_file_path, "ETIQUETTE SIMPLE CHANGEE", new_cand, position)
         
     else:
-        window.sort(key=lambda x: x[0]) #trie les étiquette de la window par ordre d'indice croissant . au cas où
+        window.sort(key=lambda x: x[0]) #trie les étiquettes de la window par ordre d'indice croissant . au cas où
         
         occurrence1 = window[0]
         new_position = occurrence1[0]
         if new_position in dict_occ_ref: # sinon une opération de change etiquette a déjà été effectuée pendant cette passe à cet indice.
-
+        
             for occurrence in window:
                 position = occurrence[0]
                 to_change = dict_occ_ref[position]
@@ -196,6 +197,7 @@ def admission(dict_occ_ref, window, new_cand, log_file_path):
             for occurrence in window[1:]:
                 position = occurrence[0]
                 del dict_occ_ref[position] # supprime les autres indices dans le dict_occ_ref
+                write_log(log_file_path, 'OCCURRENCE DEJA TRAITEE : ' + str(occurrence) + ' ' + str(window))
         
 #prend une window d'étiquette et supprime tout les mots de la stoplist contenu dans cette window. retourne une window_sans_v (sans linkwords)
 #pas pour opérer mais pour faire des vérification de windows valides
@@ -284,21 +286,23 @@ def cut_window(window, lenght):
             break
     return short_window
 
-def recession(dict_occ_ref, threshold, log_file_path):
+def recession(dict_occ_ref, threshold, log_file_path, stopword_pattern):
     cands = []
     dict_cand = {}
+
     for position, value in dict_occ_ref.items():
         if value[1] not in ['v', 't']:
             if value[1] in dict_cand:
                 dict_cand[value[1]].append(position)
             else:
                 dict_cand[value[1]] = [position] # ajoute la position de chaque forme candidate trouvé dans un dico, à la clef "candidat"
+ 
     for candidate, position_list in dict_cand.items():
         if len(position_list) >= threshold:
             cands.append(candidate)
         else: #supprime ce CAND et redécompose en étiquettes marquées 't'
+            write_log(log_file_path, 'MOT SUPPRIME ' + str(candidate) + ' ' + str(position_list))
             for position in position_list:
-                write_log(log_file_path, 'MOT SUPPRIME', dict_occ_ref[position][0], position_list)
                 #recupère le texte contenu dans cette etiquette CAND à supprimer
                 old_occurences = dict_occ_ref[position][0]
                 old_occurences = old_occurences.split() #liste de mots du texte contenu dans l'étiquette CAND

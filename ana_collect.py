@@ -83,8 +83,10 @@ def expansion_search(dict_occ_ref, candidates, linkwords, stopword_pattern, expa
     # Changer les étiquettes dans le texte
     for shape in dict_cand_windows:
         new_cand,occ_count = ana_useful.new_cand(dict_cand_windows[shape])
-        ana_useful.write_log(log_file_path, 'EXPANSION TROUVEE', new_cand, occ_count)
+        ana_useful.write_log(log_file_path, 'EXPANSION TROUVEE ' + str(new_cand) + ' ' + str(occ_count))
+        ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES ')
         for window_cand in dict_cand_windows[shape]:
+            ana_useful.write_log(log_file_path, '   ' + str(window_cand))
             ana_useful.admission(dict_occ_ref, window_cand, new_cand, log_file_path)
 
 ##################################################################
@@ -145,8 +147,10 @@ def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold,
             if dict_cand_windows != {}:
                 for shortshape, windows_cand_list in dict_cand_windows.items():
                     new_cand, occ_count = ana_useful.new_cand(windows_cand_list)
-                    ana_useful.write_log(log_file_path, 'EXPRESSION TROUVEE', new_cand, occ_count)
+                    ana_useful.write_log(log_file_path, 'EXPRESSION TROUVEE ' + str(new_cand) + ' ' + str(occ_count))
+                    ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES ')
                     for window_cand in windows_cand_list:
+                        ana_useful.write_log(log_file_path, '   ' + str(window_cand))
                         ana_useful.admission(dict_occ_ref, window_cand, new_cand, log_file_path)
 
 ##################################################################
@@ -187,9 +191,9 @@ def dict_found_words(valid_windows):
     final_dict = {}
     for aword in dict_aword_2.keys():
         buff = {}
-        for t2 in dict_aword_2.keys():
-            if ana_useful.egal_sple_term(aword, t2):
-                if len(dict_aword_2[aword]) > len(dict_aword_2[t2]):
+        for aword2 in dict_aword_2.keys():
+            if ana_useful.egal_sple_term(aword, aword2):
+                if len(dict_aword_2[aword]) > len(dict_aword_2[aword2]):
                     if (aword not in buff):
                         buff[aword] = dict_aword_2[aword]
                         if aword2 in buff and aword != aword2:
@@ -267,10 +271,15 @@ def nucleus_search(dict_occ_ref, candidates, linkwords, nucleus_threshold, log_f
                     
     dict_aword = dict_found_words(valid_windows)
     dict_occ_cand = nucleus_find_cand(dict_aword, nucleus_threshold, linkwords)
+    
     if dict_occ_cand != {}:
         for shortshape, occ_cand_list in dict_occ_cand.items():
             new_cand, occ_count = ana_useful.new_cand_nucleus(occ_cand_list)
-            ana_useful.write_log(log_file_path, 'SIMPLE TROUVE', new_cand, occ_count)
-            print('SIMPLE TROUVE', shortshape, occ_cand_list)
+            ana_useful.write_log(log_file_path, 'NOYAU TROUVE ' + str(new_cand) + ' ' + str(occ_count))
+            ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES')
+            for occ_cand in occ_cand_list:
+                ana_useful.write_log(log_file_path, '   ' + str(occ_cand))
+            #print('SIMPLE TROUVE', shortshape, occ_cand_list)
+            
             occ_cand = occ_cand_list[0] #cela sert juste à savoir que le parametre que l'on envoie dans la fonction change etiquette est une etiquette simple et pas une fenetre (composée d'étiquettes). Le contenu de cette variable est de la shortshape d'une etiquette, qu'importe le contenu.
             ana_useful.admission(dict_occ_ref, occ_cand, new_cand, log_file_path)

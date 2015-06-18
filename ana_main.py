@@ -44,17 +44,32 @@ expression_threshold = 3
 recession_threshold = min(expansion_threshold, expression_threshold, min(nucleus_threshold))
 #########################################################################
 
-with open(log_file_path, 'w', encoding = 'utf8') as log_file:
-    log_file.write("FICHIER LOG\n")
+with open(log_file_path, 'w', encoding = 'utf8') as logfile:
+    ana_useful.write_log(log_file_path,"########################################\n")
+    ana_useful.write_log(log_file_path,"FICHIER LOG\n")
+    ana_useful.write_log(log_file_path,"ANALYSE DU FICHIER : " + txt_file_path + "\n")
+    ana_useful.write_log(log_file_path,"BOOTSTRAP : " + str(cands) + "\n")
+    ana_useful.write_log(log_file_path,"########################################\n")
 
 i = 0
 while i < 1:
+    ana_useful.write_log(log_file_path,"\n\n########################################\n")
+    ana_useful.write_log(log_file_path,"RECHERCHE DE NOYAUX\n")
+    ana_useful.write_log(log_file_path,"########################################\n")
     ana_collect.nucleus_search(dict_occ_ref, cands, linkwords, nucleus_threshold, log_file_path)
-    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
+    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopword_pattern)
+    
+    ana_useful.write_log(log_file_path,"\n\n########################################\n")
+    ana_useful.write_log(log_file_path,"RECHERCHE D'EXPANSIONS\n")
+    ana_useful.write_log(log_file_path,"########################################\n")
     ana_collect.expansion_search(dict_occ_ref, cands, linkwords, stopword_pattern, expansion_threshold, log_file_path)
-    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
+    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopword_pattern)
+    
+    ana_useful.write_log(log_file_path,"\n\n########################################\n")
+    ana_useful.write_log(log_file_path,"RECHERCHE D'EXPRESSIONS\n")
+    ana_useful.write_log(log_file_path,"########################################\n")
     ana_collect.expression_search(dict_occ_ref, cands, linkwords, expression_threshold, log_file_path)
-    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
+    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopword_pattern)
     i += 1
 
 print(cands)
