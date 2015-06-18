@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
+import ana_useful
+import ana_collect
+import re
+import sys
+
+
+#FICHIERS D'ENTREE#####################################################
+if sys.argv[1]:
+    txt_file_path = sys.argv[1]
+else:
+    txt_file_path = 'test/txt.txt'
+
+stopword_file_path = 'test/stoplist_Fr.txt'
+bootstrap_file_path = 'test/bootstrap'
+linkwords_file_path = 'test/schema'
+log_file_path = 'test/log'
+stopword_pattern = ana_useful.stopword_regex(stopword_file_path)
+dict_occ_ref = ana_useful.text2occ(txt_file_path, stopword_file_path, bootstrap_file_path)
+
+# construire la liste cands à partir d'une recherche dans le dico des étiquettes et pas à partir du fichier bootstrap
+with open(bootstrap_file_path, 'r', encoding = 'utf8') as bootstrapfile:
+    cands = ana_useful.build_list(bootstrapfile)
+print('BOOTSTRAP : ',cands)
+
+with open(linkwords_file_path, 'r', encoding = 'utf8') as linkwordsfile:
+    linkwords = ana_useful.build_list(linkwordsfile)
+    
+########################################################################
+
+
+#SEUILS#################################################################
+nucleus_threshold = [3,5,5,10]
+'''
+Meme mot schema et même CAND
+Meme mot schema et CAND differents
+Mot schema different et même CAND
+Mot schema different et CAND different
+'''
+expansion_threshold = 3
+expression_threshold = 3
+recession_threshold = min(expansion_threshold, expression_threshold, min(nucleus_threshold))
+#########################################################################
+
+with open(log_file_path, 'w', encoding = 'utf8') as log_file:
+    log_file.write("FICHIER LOG\n")
+
+i = 0
+while i < 1:
+    ana_collect.nucleus_search(dict_occ_ref, cands, linkwords, nucleus_threshold, log_file_path)
+    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
+    ana_collect.expansion_search(dict_occ_ref, cands, linkwords, stopword_pattern, expansion_threshold, log_file_path)
+    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
+    ana_collect.expression_search(dict_occ_ref, cands, linkwords, expression_threshold, log_file_path)
+    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
+    i += 1
+
+print(cands)
+
