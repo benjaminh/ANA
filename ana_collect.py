@@ -262,12 +262,11 @@ def nucleus_search(dict_occ_ref, candidates, linkwords, nucleus_threshold, log_f
         valid_window = simple_valid_window(window, linkwords)
         if valid_window:
             valid_windows.append(valid_window)
-        else:
-            windowR = ana_useful.symmetric_window(window)
-            valid_windowR = simple_valid_window(windowR, linkwords)
-            if valid_windowR:
-                valid_window = ana_useful.symmetric_window(valid_windowR)
-                valid_windows.append(valid_window)
+        windowR = ana_useful.symmetric_window(window)
+        valid_windowR = simple_valid_window(windowR, linkwords)
+        if valid_windowR:
+            valid_window = ana_useful.symmetric_window(valid_windowR)
+            valid_windows.append(valid_window)
                     
     dict_aword = dict_found_words(valid_windows)
     dict_occ_cand = nucleus_find_cand(dict_aword, nucleus_threshold, linkwords)
@@ -276,6 +275,7 @@ def nucleus_search(dict_occ_ref, candidates, linkwords, nucleus_threshold, log_f
         for shortshape, occ_cand_list in dict_occ_cand.items():
             new_cand, occ_count = ana_useful.new_cand_nucleus(occ_cand_list)
             ana_useful.write_log(log_file_path, 'NOYAU TROUVE ' + str(new_cand) + ' ' + str(occ_count))
+            # TODO retrouver les fenetres valides qui ont permis de créer le noyau
             ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES')
             for occ_cand in occ_cand_list:
                 ana_useful.write_log(log_file_path, '   ' + str(occ_cand))

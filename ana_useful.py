@@ -197,7 +197,7 @@ def admission(dict_occ_ref, window, new_cand, log_file_path):
             for occurrence in window[1:]:
                 position = occurrence[0]
                 del dict_occ_ref[position] # supprime les autres indices dans le dict_occ_ref
-                write_log(log_file_path, 'OCCURRENCE DEJA TRAITEE : ' + str(occurrence) + ' ' + str(window))
+                write_log(log_file_path, '  OCCURRENCE DEJA TRAITEE : ' + str(occurrence) + ' ' + str(window))
         
 #prend une window d'étiquette et supprime tout les mots de la stoplist contenu dans cette window. retourne une window_sans_v (sans linkwords)
 #pas pour opérer mais pour faire des vérification de windows valides
