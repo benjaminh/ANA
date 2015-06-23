@@ -56,19 +56,25 @@ while i < 1:
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,"RECHERCHE DE NOYAUX\n")
     ana_useful.write_log(log_file_path,"########################################\n")
-    ana_collect.nucleus_search(dict_occ_ref, cands, linkwords, nucleus_threshold, log_file_path)
-    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopword_pattern)
+    dict_nucleus = ana_collect.nucleus_search(dict_occ_ref, cands, linkwords, nucleus_threshold, log_file_path)
+
     
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,"RECHERCHE D'EXPANSIONS\n")
     ana_useful.write_log(log_file_path,"########################################\n")
-    ana_collect.expansion_search(dict_occ_ref, cands, linkwords, stopword_pattern, expansion_threshold, log_file_path)
-    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopword_pattern)
+    dict_expa = ana_collect.expansion_search(dict_occ_ref, cands, linkwords, stopword_pattern, expansion_threshold, log_file_path)
+
     
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,"RECHERCHE D'EXPRESSIONS\n")
     ana_useful.write_log(log_file_path,"########################################\n")
-    ana_collect.expression_search(dict_occ_ref, cands, linkwords, expression_threshold, log_file_path)
+    dict_expre = ana_collect.expression_search(dict_occ_ref, cands, linkwords, expression_threshold, log_file_path)
+    
+    ana_useful.write_log(log_file_path,"\n\n########################################\n")
+    ana_useful.write_log(log_file_path,"\n\n########################################\n")
+    ana_useful.write_log(log_file_path,"GESTION DE CONFLITS ET VALIDATION'\n")
+    ana_useful.write_log(log_file_path,"########################################\n")
+    ana_useful.conflict_gestion(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, recession_threshold, log_file_path)
     cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopword_pattern)
     i += 1
 

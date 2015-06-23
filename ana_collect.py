@@ -60,10 +60,12 @@ def expansion_cand_search(valid_windows, stopword_pattern, expansion_threshold):
     # Construction d'un dictionnaire de valid_windows pour chaque shape
     i = 0
     for shape1 in shape_list:
-        if shape1 not in dict_cand_windows:
-            dict_cand_windows[shape1] = [valid_windows[i]]
-        else:
-            dict_cand_windows[shape1] += [valid_windows[i]]
+        dict_cand_windows.setdefault(shape1,[]).append(valid_windows[i])
+#Old version
+#        if shape1 not in dict_cand_windows:
+#            dict_cand_windows[shape1] = [valid_windows[i]]
+#        else:
+#            dict_cand_windows[shape1] += [valid_windows[i]]
         i += 1
     
     # Vérification du dépassement de seuil, expansion est une "expansion potentielle" avant d'être validée et insérée dans le final_dict
@@ -75,6 +77,7 @@ def expansion_cand_search(valid_windows, stopword_pattern, expansion_threshold):
 
 
 def expansion_search(dict_occ_ref, candidates, linkwords, stopword_pattern, expansion_threshold, log_file_path):
+    dict_expa = {}
     windows = ana_useful.define_windows(dict_occ_ref,candidates,3,2)
     
     valid_windows = expansion_valid_window(windows, linkwords)
@@ -87,7 +90,12 @@ def expansion_search(dict_occ_ref, candidates, linkwords, stopword_pattern, expa
         ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES ')
         for window_cand in dict_cand_windows[shape]:
             ana_useful.write_log(log_file_path, '   ' + str(window_cand))
-            ana_useful.admission(dict_occ_ref, window_cand, new_cand, log_file_path)
+        dict_expa.setdefault(new_cand,[]).append(dict_cand_windows[shape])
+    return dict_expa
+        
+
+
+#            ana_useful.admission(dict_occ_ref, window_cand, new_cand, log_file_path)
 
 ##################################################################
 # EXPRESSION
@@ -108,6 +116,9 @@ def expression_valid_window(window, candidates, linkwords):
                 valid_window = short_window #dans ce cas la fenetre valide est de type (CAND1 + CAND2) avec un mot de schéma entre eux .
         return valid_window
 
+
+'''return a dict that looks like {shortshape: [valid_windows]}
+shortshape is composed of two candidates concatenanted CANDCAND (no awords, no stopwords)'''
 def expression_find_cand(valid_windows, expression_threshold):
     shortshape_list = []
     dict_cand_windows = {}
@@ -124,19 +135,24 @@ def expression_find_cand(valid_windows, expression_threshold):
     for shortshape in shortshape_list:
         occ_count = shortshape_list.count(shortshape)
         if occ_count >= expression_threshold:
-            if shortshape in dict_cand_windows:
-                dict_cand_windows[shortshape] += [valid_windows[i]]
-            else:
-                dict_cand_windows[shortshape] = [valid_windows[i]]
+            dict_cand_windows.setdefault(shortshape,[]).append(valid_windows[i])
+#old version
+#            if shortshape in dict_cand_windows:
+#                dict_cand_windows[shortshape] += [valid_windows[i]]
+#            else:
+#                dict_cand_windows[shortshape] = [valid_windows[i]]
         i += 1
-    return dict_cand_windows
-   
+    return dict_cand_windows 
+
+
 def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold, log_file_path):
+    dict_expre = {}
     for candidate in candidates:
         candidate = [candidate]
         windows = ana_useful.define_windows(dict_occ_ref, candidate, 3, 1) #fenetre du type `CAND1 + (cand ou mot quelconque) + (cand ou mot quelconque)`. Les mots stop ("v") ne sont pas représentés
         valid_windows = []
         windows_cand_list = []
+        
         
         for window in windows:
             valid_window = expression_valid_window(window, candidate, linkwords)
@@ -145,13 +161,19 @@ def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold,
         if valid_windows != []:
             dict_cand_windows = expression_find_cand(valid_windows, expression_threshold)
             if dict_cand_windows != {}:
+                
                 for shortshape, windows_cand_list in dict_cand_windows.items():
                     new_cand, occ_count = ana_useful.new_cand(windows_cand_list)
+                    dict_expre.setdefault(new_cand,[]).append(windows_cand_list)  
+                    
                     ana_useful.write_log(log_file_path, 'EXPRESSION TROUVEE ' + str(new_cand) + ' ' + str(occ_count))
                     ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES ')
+                    
                     for window_cand in windows_cand_list:
                         ana_useful.write_log(log_file_path, '   ' + str(window_cand))
                         ana_useful.admission(dict_occ_ref, window_cand, new_cand, log_file_path)
+    return dict_expre
+
 
 ##################################################################
 # SIMPLE
@@ -166,13 +188,15 @@ def dict_found_words(valid_windows):
     # On ne peut pas modifier au fil de l'eau un dict sur lequel on itère
     # Donc on construit d'abord un dict avec tous les mots t
     # Peu importe s'ils sont égaux à l'égalité souple près
+    
     for window in valid_windows:
         for occurrence in window: #a priori il n'y a qu'un seul t dans chaque fenetre'
             if occurrence[2] == 't':
-                if occurrence[1] in dict_aword:
-                    dict_aword[occurrence[1]].extend([window]) # on garde toute la fenetre pour vérifier les différents seuils pour chaque clef.
-                else:
-                    dict_aword[occurrence[1]] = [window]
+                dict_aword.setdefault(occurrence[1],[]).append(window)
+#                if occurrence[1] in dict_aword:
+#                    dict_aword[occurrence[1]].append(window) # on garde toute la fenetre pour vérifier les différents seuils pour chaque clef.
+#                else:
+#                    dict_aword[occurrence[1]] = window
                     
     # On nettoie le dico en utilisant l'égalité souple
     dict_aword_2 = {}
@@ -219,10 +243,11 @@ def nucleus_find_cand(dict_aword, nucleus_threshold, linkwords):
             cand = ana_useful.which_cand(window)
             
             for window1 in windows:
-                linkword1 = ana_useful.which_linkword(window1, linkwords)
-                cand1 = ana_useful.which_cand(window1)
-                # TODO supprimer les doublons
                 if window1 != window:
+                    linkword1 = ana_useful.which_linkword(window1, linkwords)
+                    cand1 = ana_useful.which_cand(window1)
+                    # TODO supprimer les doublons
+                
                     if linkword[1] == linkword1[1] and cand[2] == cand1[2]:
                         count_s1 += 1
                     elif linkword[1] == linkword1[1] and cand[2] != cand1[2]:
@@ -255,7 +280,7 @@ def simple_valid_window(window, linkwords):
             return right_window
 
 def nucleus_search(dict_occ_ref, candidates, linkwords, nucleus_threshold, log_file_path):
-
+    dict_nucleus = {}
     windows = ana_useful.define_windows(dict_occ_ref, candidates, 3, 2)
     valid_windows = []
     for window in windows:
@@ -274,6 +299,8 @@ def nucleus_search(dict_occ_ref, candidates, linkwords, nucleus_threshold, log_f
     if dict_occ_cand != {}:
         for shortshape, occ_cand_list in dict_occ_cand.items():
             new_cand, occ_count = ana_useful.new_cand_nucleus(occ_cand_list)
+            dict_nucleus.setdefault(new_cand,[]).append(occ_cand_list)  
+            
             ana_useful.write_log(log_file_path, 'NOYAU TROUVE ' + str(new_cand) + ' ' + str(occ_count))
             # TODO retrouver les fenetres valides qui ont permis de créer le noyau
             ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES')
@@ -283,3 +310,4 @@ def nucleus_search(dict_occ_ref, candidates, linkwords, nucleus_threshold, log_f
             
             occ_cand = occ_cand_list[0] #cela sert juste à savoir que le parametre que l'on envoie dans la fonction change etiquette est une etiquette simple et pas une fenetre (composée d'étiquettes). Le contenu de cette variable est de la shortshape d'une etiquette, qu'importe le contenu.
             ana_useful.admission(dict_occ_ref, occ_cand, new_cand, log_file_path)
+    return dict_nucleus
