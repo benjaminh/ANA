@@ -5,6 +5,7 @@ import math
 import os
 import re
 import distance
+import copy
 from collections import Counter
 
 #paramètre globaux ou initialisation#############################
@@ -43,14 +44,14 @@ def stopword_regex(stopword_file_path):
 
 # attention div#0 si word1 == word2
 # utilisé pour egal_souple_term
-# 
+#
 def close(word1, word2):
     totleng = len(word1) + len(word2)
     dist = distance.levenshtein(word1, word2)
     closeness = totleng / (seuil_egal_sple* dist)
     return closeness
 
-#Prend 2 termes et retourne un booléen. Permet de définir si 2 termes sont égaux, en calculant une proximité entre eux. Un seuil de flexibilité est défini. ne tient pas compte des majuscules mais des accent oui. 
+#Prend 2 termes et retourne un booléen. Permet de définir si 2 termes sont égaux, en calculant une proximité entre eux. Un seuil de flexibilité est défini. ne tient pas compte des majuscules mais des accent oui.
 def egal_sple_term(word1, word2):
     souple = False
     if word1 != '' and word2 != '':
@@ -97,7 +98,7 @@ def build_list(fileobject):
     lines = fileobject.readlines()
     list_out = list(map(lambda s: re.sub(r'\n', '', s), lines))
     return list_out
-    
+
 # in dict_occ_ref, the keys are 'position' and the values are [shape, status, history]. str shape; str status; list of occurrence(s) history
 def text2occ(txt_file_path, stopword_file_path, bootstrap_file_path):
     dict_occ_ref = {}
@@ -162,48 +163,6 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
                 windows.append(window)  #met la window dans la liste des windows recherchées.
     return windows
 
-def admission(dict_occ_ref, window, new_cand_shape, log_file_path):
-    '''
-    new_cand est une chaîne de caractères normalisée en fonction des cas:
-    - expression
-    - expansion
-    - simple
-    It only modifies one window (= works window per window = doesn't accept a list of windows)
-    '''
-    new_string_list = []
-    
-    # in case of a nucleus, the var window is actualy an occurrence 
-    if isinstance(window[0], int):
-        occurrence = window
-        # in dict_occ_ref, the keys are 'position' and the values are [shape, status, history]. str shape; str status; list of window history
-        history = dict_occ_ref[occurrence[0]][2] # catch the history of the occurrence that will be modify
-        history.append(occurrence) #between brackets because it's a window composed of a single occurrence
-        dict_occ_ref[occurrence[0]] = [occurrence[1], new_cand_shape, history]
-#       write_log(log_file_path, "ETIQUETTE SIMPLE CHANGEE", new_cand, position)
-
-    # in case of an expression, or expansion
-    else:
-        window.sort(key=lambda x: x[0]) #trie les occurrences de la window par ordre d'indice croissant . au cas où
-        
-        occurrence1 = window[0]
-        new_position = occurrence1[0]
-        new_history = []
-        if new_position in dict_occ_ref: # sinon une opération de change etiquette a déjà été effectuée pendant cette passe à cet indice.
-            for occurrence in window:
-                position = occurrence[0]
-                to_change = dict_occ_ref[position]
-                new_string_list.append(to_change[0]) # catch the shapes of the occurrences concerned
-                new_string = ' '.join(new_string_list)
-                new_history.append(to_change[2]) # catch the history of the occurrences concerned
-            history = dict_occ_ref[new_position][2] # catch the history of the occurrence that will be modify
-            history.append(new_history) # rajoute à history le new_history
-            dict_occ_ref[new_position] = [new_string, new_cand, history] # remplace la première étiquette de la window (en arg) par le new_string, le new_cand et update history
-#            write_log(log_file_path, "ETIQUETTE CHANGEE", new_cand, new_indice)
-            for occurrence in window[1:]:
-                position = occurrence[0] # get the keys of the occ to delete
-                del dict_occ_ref[position] # supprime les autres indices dans le dict_occ_ref
-                write_log(log_file_path, '  OCCURRENCE RE-COMBINÉE : ' + str(occurrence) + ' ' + str(window))
-
 
 #prend une window d'étiquette et supprime tout les mots de la stoplist contenu dans cette window. retourne une window_sans_v (sans linkwords)
 #pas pour opérer mais pour faire des vérification de windows valides
@@ -230,31 +189,31 @@ def is_cand(occurrence):
         return True
     else:
         return False
-        
+
 def count_cand(window):
     count_cand = 0
     for occurrence in window:
         if is_cand(occurrence):
             count_cand += 1
     return count_cand
-    
+
 def which_cand(window):
     for occurrence in window:
         if is_cand(occurrence):
             return occurrence
-    
+
 def exists_linkword(window, linkwords):
     exists_linkword = False
     for occurrence in window:
         if occurrence[1] in linkwords:
             exists_linkword = True
     return exists_linkword
-    
+
 def which_linkword(window, linkwords):
     for occurrence in window:
         if occurrence[1] in linkwords:
             return occurrence
-        
+
 #prend une liste de window candidates et retourne un tuple [string, int] contenant la shortshape la plus fréquente et son occurence
 def new_cand(windows_cand_list):
     shape_list = []
@@ -262,7 +221,7 @@ def new_cand(windows_cand_list):
         shape = ''
         for occurrence in window:
             if occurrence[2] not in ['v', 't']:
-                shape += occurrence[2] 
+                shape += occurrence[2]
             else:
                 shape += occurrence[1]
             shape += ' '
@@ -299,11 +258,7 @@ def recession(dict_occ_ref, threshold, log_file_path, stopword_pattern):
     for position, value in dict_occ_ref.items():
         if value[1] not in ['v', 't']:
             dict_cand.setdefault(value[1],[]).append(position) # ajoute la position de chaque forme candidate trouvé dans un dico, à la clef "candidat"
-#old version
-#            if value[1] in dict_cand:
-#                dict_cand[value[1]].append(position)
-#            else:
-#                dict_cand[value[1]] = [position] # ajoute la position de chaque forme candidate trouvé dans un dico, à la clef "candidat"
+
 #2. check if cand is still occuring in the dict_occ-ref
     for candidate, position_list in dict_cand.items():
         if len(position_list) >= threshold:
@@ -317,20 +272,8 @@ def recession(dict_occ_ref, threshold, log_file_path, stopword_pattern):
                     replace_val = ocurrence[1:]
                     dict_occ_ref[replace_pos] = [replace_val]
                 write_log(log_file_path, 'RECESSION de ' + str(candidate) + ' (' + str(position) + ') ' + ' vers ' + str(last_history))
-                    
-        #old version        
-#                old_occurences = old_occurences.split() #liste de mots du texte contenu dans l'étiquette CAND
-#                replace_pos = position
-#                for old_occ in old_occurences:
-#                    dict_occ_ref[replace_pos] = [old_occ, 't']
-##                    write_log(log_file_path, 'MOT REMPLACE', dico_etiquettes[clef_replace], clef_replace)
-#                    replace_pos += 1
-#            write_log(log_file_path, 'MOT SUPPRIME ' + str(candidate) + ' ' + str(position_list))
     return cands
-    
-#p145 mais en différent! Pour modifier les étiquettes sans que les 3 modes de découverte de nouveau CAND se bousculent
-#def heuristique(newcand_et_liste_fenetre_cand)
-   
+
 
 #get all the original positions of the occurences in a window
 def get_pos(window):
@@ -339,18 +282,59 @@ def get_pos(window):
         positions_list.append(occurrence[0])
     return positions_list
 
-#sould return a list of all the occurrences (nucleuses) corresponding to the asked 'cand_shape'. 
+#sould return a list of all the occurrences (nucleuses) corresponding to the asked 'cand_shape'.
 #doit servir la construction du dico des nucleus
 def where_R_nucleus(dict_occ_ref, cand_shape):
-    occ_list = []    
+    occ_list = []
     for position, value in dict_occ_ref.items():
         if ((value[1] == 't') and (egal_sple_term(value[0], cand_shape))): # Test on 't' word to avoid catching 'v' words (ie. 'il') for a candidate (ie. 'île')
             occurence = [position, value[0], value[1], value[2]]
             occ_list.append(occurence)
     return occ_list
 
-        
-        
+
+def admission(dict_occ_ref, window, new_cand_shape, log_file_path):
+    '''
+    new_cand est une chaîne de caractères normalisée en fonction des cas:
+    - expression
+    - expansion
+    - simple
+    It only modifies one window (= works window per window = doesn't accept a list of windows)
+    '''
+    shapes_list = []
+    new_history = []    # in case of a nucleus, the var window is actualy an occurrence
+    if isinstance(window[0], int):
+        occurrence = window
+        # in dict_occ_ref, the keys are 'position' and the values are [shape, status, history]. str shape; str status; list of window history
+        history = occurrence[3] # catch the history of the occurrence that will be modify
+        hist_to_add = copy.deepcopy(occurrence)
+        history.append(hist_to_add)
+        dict_occ_ref[occurrence[0]] = [occurrence[1], new_cand_shape, history]
+#       write_log(log_file_path, "ETIQUETTE SIMPLE CHANGEE", new_cand, position)
+
+    # in case of an expression, or expansion
+    else:
+        window.sort(key=lambda x: x[0]) #trie les occurrences de la window par ordre d'indice croissant . au cas où
+
+        occurrence1 = window[0]
+        new_position = occurrence1[0]
+        new_history = []
+        if new_position in dict_occ_ref: # sinon une opération de change etiquette a déjà été effectuée pendant cette passe à cet indice.
+            for occurrence in window:
+                shapes_list.append(occurrence[1]) # catch the shapes of each occurrence concerned
+                hist_to_add = copy.deepcopy(occurrence) # catch the history of the occurrences concerned
+                new_history.append(hist_to_add)
+            new_shape = ' '.join(shapes_list)
+            history = dict_occ_ref[new_position][2] # catch the history of the occurrence that will be modify
+            dict_occ_ref[new_position] = [new_shape, new_cand_shape, new_history] # remplace la première étiquette de la window (en arg) par le new_string, le new_cand et update history
+            for occurrence in window[1:]:
+                position = occurrence[0] # get the keys of the occ to delete
+                del dict_occ_ref[position] # supprime les autres indices dans le dict_occ_ref
+                write_log(log_file_path, '  OCCURRENCE RE-COMBINÉE : ' + str(occurrence) + ' ' + str(window))
+        print(dict_occ_ref[new_position])
+
+
+
 '''
 les dict_expa, dict_expre, dict_nucleus doivent être de la forme suivant: {new_cand:[occurences]}
 le dict des nucleus doit peut-être être traité à part, et avant les autres pour favoriser l'exploration du texte.
@@ -365,45 +349,46 @@ def conflict_gestion(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, threshol
         occ_list = where_R_nucleus(dict_occ_ref, new_cand_shape)
         all_nucleus_dict[new_cand_shape] = occ_list
     # 2: modify by most occuring form
-    #sort the dictionary in a tuple (cand shape, [occ_list]), in which the first item contain the most occuring cand_shape. 
+    #sort the dictionary in a tuple (cand shape, [occ_list]), in which the first item contain the most occuring cand_shape.
     #NB: the nucleuses are composed by a unique word, so a unique occurence, so there are no "windows" but only opccurences
     all_nucleus_ordered = sorted(all_nucleus_dict, key=lambda new_cand_shape: len(all_nucleus_dict[new_cand_shape]), reverse=True)
-    for new_cand_shape in all_nucleus_ordered: # item is cand shape
+    for new_cand_shape in all_nucleus_ordered:
         occurrences = all_nucleus_dict[new_cand_shape]
         for occ in occurrences:
             if occ[0] not in seen:
                 seen.append(occ[0])
                 admission(dict_occ_ref, occ, new_cand_shape, log_file_path)
+                write_log(log_file_path, '\n 1 occurence de NUCLEUS ADMIS ' + str(new_cand_shape) + ' ' + str(occ))
         write_log(log_file_path, 'NUCLEUS ADMIS ' + str(new_cand_shape) + ' ' + str(len(occurrences)))
 
-            
+
 ##### for the other new_cands
     all_cands_dict = {}
     all_cands_dict.update(dict_expa)
     all_cands_dict.update(dict_expre) #concatenante the 2 dicts
-    
+
     seen = []
     tampon = []
     #trie le dictionnaire en un tuple (cand shape, [occ_list]) dont le premier item contient le cand_shape ayant le plus d'occurences
-    print(all_cands_dict)
     all_candshape_ordered = sorted(all_cands_dict, key=lambda new_cand_shape: len(all_cands_dict[new_cand_shape]), reverse=True)
-    
+
     for new_cand_shape in all_candshape_ordered:
         windows = all_cands_dict[new_cand_shape]
         passed = False #to know if the new_cand has been accepted
         seen_buff = [] #to count the number of accepted occurrences (not in conflict with a previous one)
         buff = []
         occ_count = threshold #initialized with the smallest possible. THe count begin when the threshold is crossed
-        for window in windows:
+        for window in windows[0]:
+            print('WINDOW', window)
             pos_list = get_pos(window)
             deja_vu =  any((True for x in pos_list if x in seen)) # doesn't enter in the loop if one of the position has allready be seen.
             if not deja_vu:
-                if passed: # passed if true only if there are more than 3 elements to modify 
+                if passed: # passed if true only if there are more than 3 elements to modify
                     seen.extend(pos_list)
                     admission(dict_occ_ref, window, new_cand_shape, log_file_path)
                     occ_count += 1
                 elif len(buff) < threshold:# until there are 3 elements to modify
-                    buff += window
+                    buff.append(window)
                     seen_buff.extend(pos_list)
                 elif len(buff) == threshold: # where there are 3 elements to modify (threshold crossed)
                     seen.extend(seen_buff)
@@ -412,10 +397,10 @@ def conflict_gestion(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, threshol
                     passed = True
         if passed:
             write_log(log_file_path, 'CANDIDAT TROUVEE' + str(new_cand_shape) + ' ' + str(occ_count))
-    
-    
-#    
-#    
-#    
-#    
-#    
+
+
+#
+#
+#
+#
+#

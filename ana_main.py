@@ -8,10 +8,10 @@ import sys
 
 
 #FICHIERS D'ENTREE#####################################################
-if sys.argv[1]:
-    txt_file_path = sys.argv[1]
-else:
-    txt_file_path = 'test/txt.txt'
+# if sys.argv[1]:
+#     txt_file_path = sys.argv[1]
+# else:
+txt_file_path = 'test/txt.txt.cleaned'
 
 stopword_file_path = 'test/stoplist_Fr.txt'
 bootstrap_file_path = 'test/bootstrap'
@@ -27,7 +27,7 @@ print('BOOTSTRAP : ',cands)
 
 with open(linkwords_file_path, 'r', encoding = 'utf8') as linkwordsfile:
     linkwords = ana_useful.build_list(linkwordsfile)
-    
+
 ########################################################################
 
 
@@ -58,18 +58,18 @@ while i < 1:
     ana_useful.write_log(log_file_path,"########################################\n")
     dict_nucleus = ana_collect.nucleus_search(dict_occ_ref, cands, linkwords, nucleus_threshold, log_file_path)
 
-    
+
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,"RECHERCHE D'EXPANSIONS\n")
     ana_useful.write_log(log_file_path,"########################################\n")
     dict_expa = ana_collect.expansion_search(dict_occ_ref, cands, linkwords, stopword_pattern, expansion_threshold, log_file_path)
 
-    
+
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,"RECHERCHE D'EXPRESSIONS\n")
     ana_useful.write_log(log_file_path,"########################################\n")
     dict_expre = ana_collect.expression_search(dict_occ_ref, cands, linkwords, expression_threshold, log_file_path)
-    
+
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,"GESTION DE CONFLITS ET VALIDATION'\n")
@@ -79,4 +79,3 @@ while i < 1:
     i += 1
 
 print(cands)
-

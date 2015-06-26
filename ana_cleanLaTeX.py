@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# encoding: utf-8
 import re
 import os
 import errno
@@ -27,7 +29,7 @@ def AcoladeClose(origin_file_path):
             filestep1.close()
             origin_file.close()
 
-    
+
 def wo_markup(origin_file_path):
     file_step1 = origin_file_path + 'BeinClean.step1'
     with open(file_step1, "r", encoding = 'utf8') as filestep1:
@@ -65,12 +67,11 @@ def silentremove(origin_file_path):
     except OSError as e: # this would be "except OSError, e:" before Python 2.6
         if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
             raise # re-raise exception if a different error occured
-    
-    
+
+
 ###############################################
 ###############################################
 origin_file_path = 'test/txt.txt'
 AcoladeClose(origin_file_path) # remove '\n' to close the opened braces in a single line
 wo_markup(origin_file_path) # remove the markup strings in the text
 silentremove(origin_file_path) # remove the filestep1 (that is a temporary file)
-
