@@ -137,6 +137,12 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
     for cand in candidates:
         for key, value in iter(dict_occ_ref.items()):
             window =[]
+            try:
+                if cand == value[1]:
+                    pass
+            except:
+                print("cand, key, value in define_window", cand, key, value)
+
             if cand == value[1]: #trouve les étiquettes contenant candidat dans le dico
                 #construit une window composée d'étiquettes
                 window.append([key,value[0],value[1], value[2]]) #ajoute l'occurrence du candidat trouvé
@@ -147,16 +153,20 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
                 # boucle pour insérer autant d'étiquettes que demandées (paramètres width et w) après le candidat (les stopwords (de type noté 'v') ne comptent pas)
                 while count_fw < after_cand:
                     key1 +=1
+                    occurrence = []
                     if key1 in dict_occ_ref:
-                        occurrence = [key1] + dict_occ_ref[key1]
+                        occurrence.append(key1)
+                        occurrence.extend(dict_occ_ref[key1])
                         window.append(occurrence) #insere les occurrence en fin de window. occurrence de la forme [indice, mot, typemot, history]
                         if occurrence[2] != 'v':
                             count_fw += 1
                 # boucle pour insérer autant d'étiquettes que demandées (paramètres width et cand_pos) avant le candidat (les stopwords (de type noté 'v') ne comptent pas)
                 while count_bw < before_cand:
                     key2 -=1
+                    occurrence = []
                     if key2 in dict_occ_ref:
-                        occurrence = [key2] + dict_occ_ref[key2]
+                        occurrence.append(key2)
+                        occurrence.extend(dict_occ_ref[key2])
                         window.insert(0, occurrence) #insere les occurrence en début de window. occurrence de la forme [indice, mot, typemot, history]
                         if occurrence[2] != 'v':
                             count_bw += 1
@@ -327,8 +337,8 @@ def admission(dict_occ_ref, window, new_cand_shape, log_file_path):
         history = occurrence[3] # catch the history of the occurrence that will be modify
         hist_to_add = copy.deepcopy(occurrence)
         history.append(hist_to_add)
-        dict_occ_ref[occurrence[0]] = [occurrence[1], new_cand_shape, [history]] #history is in brackets cause it should be same format as a window.
-#       write_log(log_file_path, "ETIQUETTE SIMPLE CHANGEE", new_cand, position)
+        dict_occ_ref[occurrence[0]] = occurrence[1], new_cand_shape, [history] #history is in brackets cause it should be same format as a window.
+        write_log(log_file_path, "NUCLEUS CHANGÉ " + str(dict_occ_ref[occurrence[0]]))
 
     # in case of an expression, or expansion
     else:
@@ -343,15 +353,14 @@ def admission(dict_occ_ref, window, new_cand_shape, log_file_path):
                 hist_to_add = copy.deepcopy(occurrence) # catch the history of the occurrences concerned
                 new_history.append(hist_to_add)
             new_shape = ' '.join(shapes_list)
-            history = dict_occ_ref[new_position][2] # catch the history of the occurrence that will be modify
-            dict_occ_ref[new_position] = [new_shape, new_cand_shape, new_history] # remplace la première étiquette de la window (en arg) par le new_string, le new_cand et update history
+            dict_occ_ref[new_position] = new_shape, new_cand_shape, new_history # remplace la première étiquette de la window (en arg) par le new_string, le new_cand et update history
             for occurrence in window[1:]:
                 position = occurrence[0] # get the keys of the occ to delete
                 try:
                     del dict_occ_ref[position] # supprime les autres indices dans le dict_occ_ref
                 except:
-                    print ('  OCCURRENCE NON TROUVÉE, donc non supprimée: '+ str(window[0]) + str(occurrence))
-            write_log(log_file_path, '  OCCURRENCE RE-COMBINÉE : ' + str(occurrence))
+                    print ('  OCCURRENCE NON TROUVÉE, donc non supprimée: base: '+ str(window[0]) + ' avec: '+ str(occurrence))
+            write_log(log_file_path, '  OCCURRENCE RE-COMBINÉE : ' + str(occurrence) +'vers ' + str(window))
 
 
 

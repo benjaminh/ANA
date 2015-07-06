@@ -155,9 +155,9 @@ def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold,
                     ana_useful.write_log(log_file_path, 'EXPRESSION TROUVEE ' + str(new_cand) + ' ' + str(occ_count))
                     ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES ')
 
-                    for window_cand in windows_cand_list:
-                        ana_useful.write_log(log_file_path, '   ' + str(window_cand))
-                        ana_useful.admission(dict_occ_ref, window_cand, new_cand, log_file_path)
+                    # for window_cand in windows_cand_list:
+                    #     ana_useful.write_log(log_file_path, '   ' + str(window_cand))
+                        # ana_useful.admission(dict_occ_ref, window_cand, new_cand, log_file_path)
     return dict_expre
 
 
@@ -291,7 +291,4 @@ def nucleus_search(dict_occ_ref, candidates, linkwords, nucleus_threshold, log_f
             for occ_cand in occ_cand_list:
                 ana_useful.write_log(log_file_path, '   ' + str(occ_cand))
             #print('SIMPLE TROUVE', shortshape, occ_cand_list)
-
-            occ_cand = occ_cand_list[0] #cela sert juste à savoir que le parametre que l'on envoie dans la fonction change etiquette est une etiquette simple et pas une fenetre (composée d'étiquettes). Le contenu de cette variable est de la shortshape d'une etiquette, qu'importe le contenu.
-            ana_useful.admission(dict_occ_ref, occ_cand, new_cand, log_file_path)
     return dict_nucleus

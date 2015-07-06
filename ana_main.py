@@ -51,7 +51,7 @@ with open(log_file_path, 'w', encoding = 'utf8') as logfile:
     ana_useful.write_log(log_file_path,"BOOTSTRAP : " + str(cands) + "\n")
     ana_useful.write_log(log_file_path,"########################################\n")
 
-for nb_passe in range(1, 15):
+for nb_passe in range(1, 8):
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path, 'passe n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
     ana_useful.write_log(log_file_path,"########################################\n")
