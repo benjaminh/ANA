@@ -61,11 +61,6 @@ def expansion_cand_search(valid_windows, stopword_pattern, expansion_threshold):
     i = 0
     for shape1 in shape_list:
         dict_cand_windows.setdefault(shape1,[]).append(valid_windows[i])
-#Old version
-#        if shape1 not in dict_cand_windows:
-#            dict_cand_windows[shape1] = [valid_windows[i]]
-#        else:
-#            dict_cand_windows[shape1] += [valid_windows[i]]
         i += 1
 
     # Vérification du dépassement de seuil, expansion est une "expansion potentielle" avant d'être validée et insérée dans le final_dict
@@ -93,9 +88,6 @@ def expansion_search(dict_occ_ref, candidates, linkwords, stopword_pattern, expa
         dict_expa.setdefault(new_cand,[]).append(dict_cand_windows[shape])
     return dict_expa
 
-
-
-#            ana_useful.admission(dict_occ_ref, window_cand, new_cand, log_file_path)
 
 ##################################################################
 # EXPRESSION
@@ -136,11 +128,6 @@ def expression_find_cand(valid_windows, expression_threshold):
         occ_count = shortshape_list.count(shortshape)
         if occ_count >= expression_threshold:
             dict_cand_windows.setdefault(shortshape,[]).append(valid_windows[i])
-#old version
-#            if shortshape in dict_cand_windows:
-#                dict_cand_windows[shortshape] += [valid_windows[i]]
-#            else:
-#                dict_cand_windows[shortshape] = [valid_windows[i]]
         i += 1
     return dict_cand_windows
 
@@ -153,7 +140,6 @@ def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold,
         valid_windows = []
         windows_cand_list = []
 
-
         for window in windows:
             valid_window = expression_valid_window(window, candidate, linkwords)
             if valid_window: #évite les erreur dûes à une fenetre valide vide.
@@ -163,7 +149,7 @@ def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold,
             if dict_cand_windows != {}:
 
                 for shortshape, windows_cand_list in dict_cand_windows.items():
-                    new_cand, occ_count = ana_useful.new_cand(windows_cand_list)
+                    new_cand, occ_count = ana_useful.new_cand_expression(windows_cand_list, linkwords)
                     dict_expre.setdefault(new_cand,[]).append(windows_cand_list)
 
                     ana_useful.write_log(log_file_path, 'EXPRESSION TROUVEE ' + str(new_cand) + ' ' + str(occ_count))
