@@ -118,14 +118,14 @@ def text2occ(txt_file_path, stopword_file_path, bootstrap_file_path):
                     marked = False
                     if (lower_word in stoplist) or (re.match(r'(\b\d+\b)', word) and not re.match(r'(1\d\d\d|20\d\d)', word)): #les chiffres sont des 'v' mais pas les dates.:
                         marked = True
-                        dict_occ_ref[i] = [word, 'v', []] #the history is empty at the begining
+                        dict_occ_ref[i] = word, 'v', [] #the history is empty at the begining
                     for cand in cands:
                         egaux = egal_sple_term(cand, lower_word)
                         if egaux == True:
                             marked = True
-                            dict_occ_ref[i] = [word, cand, []] #the history is empty at the begining
+                            dict_occ_ref[i] = word, cand, [] #the history is empty at the begining
                     if marked == False:
-                        dict_occ_ref[i] = [word, 't', []] #the history is empty at the begining
+                        dict_occ_ref[i] = word, 't', [] #the history is empty at the begining
             return dict_occ_ref
 
 
@@ -141,7 +141,7 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
                 if cand == value[1]:
                     pass
             except:
-                print("cand, key, value in define_window", cand, key, value)
+                print("problem with cand, key, value in define_window", cand, key, value)
 
             if cand == value[1]: #trouve les étiquettes contenant candidat dans le dico
                 #construit une window composée d'étiquettes
@@ -304,7 +304,6 @@ def recession(dict_occ_ref, threshold, log_file_path, stopword_pattern):
     for position, value in dict_occ_ref.items():
         if value[1] not in ['v', 't']:
             dict_cand.setdefault(value[1],[]).append(position) # ajoute la position de chaque forme candidate trouvé dans un dico, à la clef "candidat"
-
 #2. check if cand is still occuring in the dict_occ-ref
     for candidate, position_list in dict_cand.items():
         if len(position_list) >= threshold:
@@ -313,10 +312,11 @@ def recession(dict_occ_ref, threshold, log_file_path, stopword_pattern):
             for position in position_list:
                 #recupère le texte contenu dans cette etiquette CAND à supprimer
                 last_history = dict_occ_ref[position][2] #returns last state of the candidate from its history. last_histoy is a window of occurrences or a window of a single occurrence in case of a nucleus.
+
                 for occurrence in last_history:
                     replace_pos = occurrence[0]
                     replace_val = occurrence[1:]
-                    dict_occ_ref[replace_pos] = [replace_val]
+                    dict_occ_ref[replace_pos] = replace_val
                 write_log(log_file_path, 'RECESSION de ' + str(candidate) + ' (' + str(position) + ') ' + ' vers ' + str(last_history))
     return cands
 
@@ -360,7 +360,7 @@ def admission(dict_occ_ref, window, new_cand_shape, log_file_path):
                     del dict_occ_ref[position] # supprime les autres indices dans le dict_occ_ref
                 except:
                     print ('  OCCURRENCE NON TROUVÉE, donc non supprimée: base: '+ str(window[0]) + ' avec: '+ str(occurrence))
-            write_log(log_file_path, '  OCCURRENCE RE-COMBINÉE : ' + str(occurrence) +'vers ' + str(window))
+            write_log(log_file_path, '  OCCURRENCE RE-COMBINÉE : ' + str(occurrence) +'vers ' + str(dict_occ_ref[new_position]))
 
 
 

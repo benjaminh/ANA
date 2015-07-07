@@ -33,6 +33,7 @@ with open(linkwords_file_path, 'r', encoding = 'utf8') as linkwordsfile:
 
 #SEUILS#################################################################
 nucleus_threshold = [3,5,5,10]
+#nucleus_threshold = [2,4,4,8]
 '''
 Meme mot schema et même CAND
 Meme mot schema et CAND differents
@@ -51,18 +52,16 @@ with open(log_file_path, 'w', encoding = 'utf8') as logfile:
     ana_useful.write_log(log_file_path,"BOOTSTRAP : " + str(cands) + "\n")
     ana_useful.write_log(log_file_path,"########################################\n")
 
-for nb_passe in range(1, 8):
+for nb_passe in range(1, 5):
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path, 'passe n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
     ana_useful.write_log(log_file_path,"########################################\n")
     dict_nucleus = ana_collect.nucleus_search(dict_occ_ref, cands, linkwords, nucleus_threshold, log_file_path)
 
-
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,'passe n°' + str(nb_passe) + " RECHERCHE D'EXPANSIONS\n")
     ana_useful.write_log(log_file_path,"########################################\n")
     dict_expa = ana_collect.expansion_search(dict_occ_ref, cands, linkwords, stopword_pattern, expansion_threshold, log_file_path)
-
 
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,'passe n°' + str(nb_passe) + " RECHERCHE D'EXPRESSIONS\n")
