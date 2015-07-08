@@ -135,7 +135,7 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
     before_cand = cand_pos-1 # nombre d'étiquette avant le candidat dans la fenetre
     after_cand = width-cand_pos # nombre d'étiquette apres le candidat dans la fenetre
     for cand in candidates:
-        for key, value in iter(dict_occ_ref.items()):
+        for key, value in dict_occ_ref.items():
             window =[]
             try:
                 if cand == value[1]:
@@ -145,17 +145,16 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
 
             if cand == value[1]: #trouve les étiquettes contenant candidat dans le dico
                 #construit une window composée d'étiquettes
-                window.append([key,value[0],value[1], value[2]]) #ajoute l'occurrence du candidat trouvé
-                count_bw = 0
-                count_fw = 0
+                window.append([key,value[0],value[1], value[2]]) #ajoute l'occurrence du candidat trouvé dans la fenetre
+                count_bw = 0 # count forward steps
+                count_fw = 0 # count backward steps
                 key1 = key
                 key2 = key
                 # boucle pour insérer autant d'étiquettes que demandées (paramètres width et w) après le candidat (les stopwords (de type noté 'v') ne comptent pas)
                 while count_fw < after_cand:
                     key1 +=1
-                    occurrence = []
                     if key1 in dict_occ_ref:
-                        occurrence.append(key1)
+                        occurrence = [key1]
                         occurrence.extend(dict_occ_ref[key1])
                         window.append(occurrence) #insere les occurrence en fin de window. occurrence de la forme [indice, mot, typemot, history]
                         if occurrence[2] != 'v':
@@ -163,9 +162,8 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
                 # boucle pour insérer autant d'étiquettes que demandées (paramètres width et cand_pos) avant le candidat (les stopwords (de type noté 'v') ne comptent pas)
                 while count_bw < before_cand:
                     key2 -=1
-                    occurrence = []
                     if key2 in dict_occ_ref:
-                        occurrence.append(key2)
+                        occurrence = [key2]
                         occurrence.extend(dict_occ_ref[key2])
                         window.insert(0, occurrence) #insere les occurrence en début de window. occurrence de la forme [indice, mot, typemot, history]
                         if occurrence[2] != 'v':
@@ -266,7 +264,7 @@ def new_cand_nucleus(occ_cand_list):
 
 # tronque une fenetre après un certain nombre de mot non "v"
 def cut_window(window, length):
-    count = 1
+    count = 0
     short_window = []
     for occurrence in window:
         if count < length:
@@ -312,7 +310,6 @@ def recession(dict_occ_ref, threshold, log_file_path, stopword_pattern):
             for position in position_list:
                 #recupère le texte contenu dans cette etiquette CAND à supprimer
                 last_history = dict_occ_ref[position][2] #returns last state of the candidate from its history. last_histoy is a window of occurrences or a window of a single occurrence in case of a nucleus.
-
                 for occurrence in last_history:
                     replace_pos = occurrence[0]
                     replace_val = occurrence[1:]
@@ -337,7 +334,7 @@ def admission(dict_occ_ref, window, new_cand_shape, log_file_path):
         history = occurrence[3] # catch the history of the occurrence that will be modify
         hist_to_add = copy.deepcopy(occurrence)
         history.append(hist_to_add)
-        dict_occ_ref[occurrence[0]] = occurrence[1], new_cand_shape, [history] #history is in brackets cause it should be same format as a window.
+        dict_occ_ref[occurrence[0]] = occurrence[1], new_cand_shape, history #history is in brackets cause it should be same format as a window.
         write_log(log_file_path, "NUCLEUS CHANGÉ " + str(dict_occ_ref[occurrence[0]]))
 
     # in case of an expression, or expansion
@@ -368,7 +365,7 @@ def admission(dict_occ_ref, window, new_cand_shape, log_file_path):
 les dict_expa, dict_expre, dict_nucleus doivent être de la forme suivant: {new_cand:[occurences]}
 le dict des nucleus doit peut-être être traité à part, et avant les autres pour favoriser l'exploration du texte.
 '''
-def conflict_gestion(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, threshold, log_file_path):
+def conflict_manager(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, threshold, log_file_path):
     seen = []
     tampon = []
 ##### for the nucleuses
@@ -405,25 +402,22 @@ def conflict_gestion(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, threshol
         seen_buff = [] #to count the number of accepted occurrences (not in conflict with a previous one)
         buff = []
         occ_count = threshold #initialized with the smallest possible. THe count begin when the threshold is crossed
-        for window in windows[0]:
+        for window in windows:
             pos_list = get_pos(window)
-            deja_vu =  any((True for x in pos_list if x in seen)) # doesn't enter in the loop if one of the position has allready be seen.
+            deja_vu =  any((True for x in pos_list if x in seen)) # doesn't enter in the loop if one of the position has allready be seen this step.
             if not deja_vu:
                 if passed: # passed if true only if there are more than 3 elements to modify
                     seen.extend(pos_list)
                     admission(dict_occ_ref, window, new_cand_shape, log_file_path)
                     occ_count += 1
-                elif len(buff) < threshold:# until there are 3 elements to modify
+                else: # until there are 3 elements to modify
                     buff.append(window)
                     seen_buff.extend(pos_list)
-                elif len(buff) == threshold: # where there are 3 elements t modify (threshold crossed)
-                    seen.extend(seen_buff)
-                    for window in buff: # admission only accepts one window
-                        # try:
-                        admission(dict_occ_ref, window, new_cand_shape, log_file_path)
-                        # except:
-                        #     print(window, new_cand_shape)
-                    passed = True
+                    if len(buff) == threshold: #  where there are 3 elements t modify (threshold crossed)
+                        seen.extend(seen_buff)
+                        for window in buff: # admission only accepts one window
+                            admission(dict_occ_ref, window, new_cand_shape, log_file_path)
+                        passed = True
         if passed:
             write_log(log_file_path, 'CANDIDAT ADMIS ' + str(new_cand_shape) + ' ' + str(occ_count))
 

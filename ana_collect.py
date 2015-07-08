@@ -77,14 +77,15 @@ def expansion_search(dict_occ_ref, candidates, linkwords, stopword_pattern, expa
     valid_windows = expansion_valid_window(windows, linkwords)
     dict_cand_windows = expansion_cand_search(valid_windows, stopword_pattern, expansion_threshold)
 
-    # Changer les étiquettes dans le texte
+    # Find the new cand and build a new dict and write in the log, what there is at this step.
     for shape in dict_cand_windows:
         new_cand,occ_count = ana_useful.new_cand(dict_cand_windows[shape])
         ana_useful.write_log(log_file_path, 'EXPANSION TROUVEE ' + str(new_cand) + ' ' + str(occ_count))
         ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES ')
         for window_cand in dict_cand_windows[shape]:
             ana_useful.write_log(log_file_path, '   ' + str(window_cand))
-        dict_expa.setdefault(new_cand,[]).append(dict_cand_windows[shape])
+        # dict_expa.setdefault(new_cand,[]).append(dict_cand_windows[shape])
+        dict_expa[new_cand] = dict_cand_windows[shape]
     return dict_expa
 
 
@@ -145,16 +146,16 @@ def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold,
                 valid_windows.append(valid_window)
         if valid_windows != []:
             dict_cand_windows = expression_find_cand(valid_windows, expression_threshold)
-            if dict_cand_windows != {}:
 
+            if dict_cand_windows != {}:
                 for shortshape, windows_cand_list in dict_cand_windows.items():
                     new_cand, occ_count = ana_useful.new_cand_expression(windows_cand_list, linkwords)
-                    dict_expre.setdefault(new_cand,[]).append(windows_cand_list)
+                    dict_expre[new_cand] = windows_cand_list
+                    # dict_expre.setdefault(new_cand,[]).append(windows_cand_list)
 
                     ana_useful.write_log(log_file_path, 'EXPRESSION TROUVEE ' + str(new_cand) + ' ' + str(occ_count))
                     ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES ')
                     for window_cand in windows_cand_list:
-                        print(windows_cand_list)
                         ana_useful.write_log(log_file_path, '   ' + str(window_cand))
     return dict_expre
 

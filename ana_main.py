@@ -52,9 +52,13 @@ with open(log_file_path, 'w', encoding = 'utf8') as logfile:
     ana_useful.write_log(log_file_path,"BOOTSTRAP : " + str(cands) + "\n")
     ana_useful.write_log(log_file_path,"########################################\n")
 
-for nb_passe in range(1, 5):
+
+dict_expa = {}
+dict_expre = {}
+
+for nb_passe in range(1, 10):
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
-    ana_useful.write_log(log_file_path, 'passe n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
+    ana_useful.write_log(log_file_path, 'passe __ n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
     ana_useful.write_log(log_file_path,"########################################\n")
     dict_nucleus = ana_collect.nucleus_search(dict_occ_ref, cands, linkwords, nucleus_threshold, log_file_path)
 
@@ -72,7 +76,7 @@ for nb_passe in range(1, 5):
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,'passe n°' + str(nb_passe) + " GESTION DE CONFLITS ET VALIDATION'\n")
     ana_useful.write_log(log_file_path,"########################################\n")
-    ana_useful.conflict_gestion(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, recession_threshold, log_file_path)
+    ana_useful.conflict_manager(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, recession_threshold, log_file_path)
     cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopword_pattern)
 
-    print(cands)
+    print('CANDIDATS \n step n°',nb_passe, '\n', cands, '\n\n################# step n°',nb_passe+1, '#################\n')
