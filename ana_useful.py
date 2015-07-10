@@ -32,19 +32,20 @@ def accent_remove(lower_word):
     word = first_caracter + lower_word2
     return word
 
+#OBSOLETE
 #construit une regex de tous les stopWords
-def stopword_regex(stopword_file_path):
-    with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
-        stoplist = build_list(stopwordfile)
-        #stoplist = map(lambda s: "\\b" + s + "\\b", stoplist)
-        stopstring = '|'.join(stoplist)
-        stopstring = '(?siu)' + '(' + stopstring + ')'
-        stopword_pattern = re.compile(stopstring)
-        return stoplist
+# def stopword_pattern(stopword_file_path):
+#     with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
+#         stoplist = build_list(stopwordfile)
+#         # stoplist = map(lambda s: "\\b" + s + "\\b", stoplist)
+#         # stopstring = '|'.join(stoplist)
+#         # stopstring = '(?siu)' + '(' + stopstring + ')'
+#         # stopword_pattern = re.compile(stopstring)
+#         return stopword_pattern
+
 
 # attention div#0 si word1 == word2
 # utilisé pour egal_souple_term
-#
 def close(word1, word2):
     totleng = len(word1) + len(word2)
     dist = distance.levenshtein(word1, word2)
@@ -68,7 +69,7 @@ def egal_sple_term(word1, word2):
     return souple
 
 #Prend 2 chaînes et retourne un booléen. Permet de définir si 2 chaînes sont égales. Retire les mots de la `stoplist` contenu dans les chaïnes. Calcul la sommes des proximités des paires de mots (chaine A, chaine B contiennent les paires A1 B1; A2 B2; A3 B3).
-def egal_sple_chain(string1, string2, stopword_pattern):
+def egal_sple_chain(string1, string2, stopwords_list):
 #    st1 = re.sub(stopword_pattern, '', string1)
 #    st2 = re.sub(stopword_pattern, '', string2)
     st1 = []
@@ -77,11 +78,11 @@ def egal_sple_chain(string1, string2, stopword_pattern):
     string2 = string2.split()
     for word in string1:
         word = word.lower()
-        if word not in stopword_pattern:
+        if word not in stopwords_list:
             st1.append(word)
     for word in string2:
         word = word.lower()
-        if word not in stopword_pattern:
+        if word not in stopwords_list:
             st2.append(word)
     souple = True
     if len(st1) != len(st2):
@@ -100,33 +101,29 @@ def build_list(fileobject):
     return list_out
 
 # in dict_occ_ref, the keys are 'position' and the values are [shape, status, history]. str shape; str status; list of occurrence(s) history
-def text2occ(txt_file_path, stopword_file_path, bootstrap_file_path):
+def text2occ(txt_file_path, stopwords_list, cands):
     dict_occ_ref = {}
     i = 0
     with open(txt_file_path, 'r', encoding = 'utf8') as txtfile:
-        with open(stopword_file_path, 'r', encoding = 'utf8') as stopfile:
-            with open(bootstrap_file_path, 'r', encoding = 'utf8') as bootstrapfile:
-                text = txtfile.read()
-                stoplist = build_list(stopfile)
-                cands = build_list(bootstrapfile)
-                #texte = re.sub('-', '_', texte) # pour éviter de perdre les traits d'union '-'
-                separator = re.compile(r'\W+') #attention selon les distrib, W+ peut catcher les lettre accentuées comme des "non lettre"
-                words = re.split(separator, text)
-                for word in words:
-                    lower_word = word.lower()
-                    i += 1
-                    marked = False
-                    if (lower_word in stoplist) or (re.match(r'(\b\d+\b)', word) and not re.match(r'(1\d\d\d|20\d\d)', word)): #les chiffres sont des 'v' mais pas les dates.:
-                        marked = True
-                        dict_occ_ref[i] = word, 'v', [] #the history is empty at the begining
-                    for cand in cands:
-                        egaux = egal_sple_term(cand, lower_word)
-                        if egaux == True:
-                            marked = True
-                            dict_occ_ref[i] = word, cand, [] #the history is empty at the begining
-                    if marked == False:
-                        dict_occ_ref[i] = word, 't', [] #the history is empty at the begining
-            return dict_occ_ref
+        text = txtfile.read()
+        #texte = re.sub('-', '_', texte) # pour éviter de perdre les traits d'union '-'
+        separator = re.compile(r'\W+') #attention selon les distrib, W+ peut catcher les lettre accentuées comme des "non lettre"
+        words = re.split(separator, text)
+        for word in words:
+            lower_word = word.lower()
+            i += 1
+            marked = False
+            if (lower_word in stopwords_list) or (re.match(r'(\b\d+\b)', word) and not re.match(r'(1\d\d\d|20\d\d)', word)): #les chiffres sont des 'v' mais pas les dates.:
+                marked = True
+                dict_occ_ref[i] = word, 'v', [] #the history is empty at the begining
+            for cand in cands:
+                egaux = egal_sple_term(cand, lower_word)
+                if egaux == True:
+                    marked = True
+                    dict_occ_ref[i] = word, cand, [] #the history is empty at the begining
+            if marked == False:
+                dict_occ_ref[i] = word, 't', [] #the history is empty at the begining
+        return dict_occ_ref
 
 
 #prend en paramètres: le dico des étiquettes, une liste de `CAND`, `width` (taille de la fenetre) et `w` (position du `CAND` dans la fenêtre (1, 2, 3 ou 4 souvent)) et sort une liste de toutes les suites d'étiquettes numérotées (une fenetre) correspondant aux critères: les fenêtres. Les étiquettes sont de la shortshape [indice, mot, typemot] dans les fenetres.
@@ -222,6 +219,15 @@ def which_linkword(window, linkwords):
         if occurrence[1] in linkwords:
             return occurrence
 
+# returns a list of a words in
+def aword_shape(window):
+    for occ in window:
+        if occ[2] == 't':
+            aword_shape = occ[1]
+    return aword_shape
+
+
+
 #prend une liste de window candidates et retourne un tuple [string, int] contenant le new_cand_shape et son occurence
 #the new_cand_shape is CAND1 + last_linkword + CAND2.
 def new_cand_expression(windows_cand_list, linkwords):
@@ -275,7 +281,34 @@ def cut_window(window, length):
             break
     return short_window
 
+def merge_dicts(*dict_args):
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
 
+def merge_egal_sple_dictkeys(*dict_args):
+    '''
+    the dicts should be with str type as key,
+    based on egal_sple fonction.
+    Given any number of dicts, shallow copy and merge into a new dict,
+    based on egal_sple fonction.
+    '''
+    if len(dict_args) > 1:
+        merged = merge_dicts(dict_args)
+    else:
+        merged = dict_args[0]
+#TODO if one one key value pair in the merged dict then returns the dict
+
+    print(merged)
+    z = {}
+    seen = []
+    for key1 in merged:
+        for key2 in merged:
+            if egal_sple_term(key1, key2) and (key1 not in seen):
+                z.setdefault(key1, []).extend(merged[key2])  # concatenate the values of the the egal keys
+                seen.append(key2)
+    return z
 
 #get all the original positions of the occurences in a window
 def get_pos(window):
@@ -295,7 +328,7 @@ def where_R_nucleus(dict_occ_ref, cand_shape):
     return occ_list
 
 
-def recession(dict_occ_ref, threshold, log_file_path, stopword_pattern):
+def recession(dict_occ_ref, threshold, log_file_path, stopwords_list):
     cands = []
     dict_cand = {}
 #1. build a dico, to count the occurrences of each candidate.

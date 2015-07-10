@@ -96,18 +96,54 @@ def expansion_search(dict_occ_ref, candidates, linkwords, stopword_pattern, expa
 
 #schema = [au, aux, d',de, du, des, en] pourquoi pas "avec"
 #une fenetre valide ne contient que 2 CAND, séparés par un mot de schéma, avec éventuellement un mot 't' au milieu.
-def expression_valid_window(window, candidates, linkwords):
-    valid_window = []
-    if (ana_useful.exists_linkword(window, linkwords) == True and ana_useful.count_cand(window) == 2):
-        if ana_useful.is_cand(window[-1]): #list[-1] returns last item of the list
-            valid_window = window #dans ce cas la fenetre valide est de type (CAND1 + "mot quelconque" + CAND2) avec un mot de schéma quelque part.
-        else:
-            short_window = ana_useful.cut_window(window, 2)
-            #Puisqu'on a 2 CAND et que la fenetre fait 3 mots et que le dernier mot n'est pas un CAND alors la fenetre était de type CAND + CAND + mot quelconque
-            if ana_useful.exists_linkword(short_window, linkwords) == True:
-                valid_window = short_window #dans ce cas la fenetre valide est de type (CAND1 + CAND2) avec un mot de schéma entre eux .
-        return valid_window
 
+#windows are: (CAND1 + "aword" + CAND2)
+# we check if the aword in center is not the same 3 times or more (this case it would be better to build an expansion first, then an expression)
+def not_expa_inside_expre(windows):
+    dict_awords_shape_seen = {}
+    valid_windows_t3 = []
+    awords_shapes_list = []
+
+    for window in windows:
+        aword_shape = ana_useful.aword_shape(window)
+        print('aword_shape', aword_shape)
+        dict_awords_shape_seen.setdefault(aword_shape, []).append(window) # the strict eguality (on the aword) is ok. But remains the eglité souple.
+
+    dict_awords_shape = ana_useful.merge_egal_sple_dictkeys(dict_awords_shape_seen)
+
+    if dict_awords_shape != {}:
+        print('dict_aword_shape : ',dict_awords_shape)
+        for aword_shape, windows in dict_awords_shape.items():
+            if (0 < len(windows) < 3):
+                valid_windows_t3.extend(windows)
+    return valid_windows_t3
+
+#schema = [au, aux, d',de, du, des, en] pourquoi pas "avec"
+#une fenetre valide ne contient que 2 CAND, séparés par un mot de schéma, avec éventuellement un mot 't' au milieu.
+def expression_valid_windows(windows, candidate, linkwords):
+    valid_window = []
+    valid_windows = []
+    buff = []
+
+    for window in windows:
+        if (ana_useful.exists_linkword(window, linkwords) == True and ana_useful.count_cand(window) == 2):
+            if ana_useful.is_cand(window[-1]): #list[-1] returns last item of the list
+                cand2 = ana_useful.which_cand([window[-1]])
+                if cand2[2] not in candidate.split(): #to avoid building expression like "bâtiment de cet ensemble de bâtiments" -> "batiment de bâtiment"
+                    buff.append(window) #dans ce cas la fenetre valide est de type (CAND1 + "aword" + CAND2) avec un mot de schéma quelque part.
+                # in the buffer because we need to know if the aword in center is not the same 3 times or more (this case it would be better to build an expansion first, then an expression)
+            else:
+                short_window = ana_useful.cut_window(window, 2)
+                #Puisqu'on a 2 CAND et que la fenetre fait 3 mots et que le dernier mot n'est pas un CAND alors la fenetre était de type CAND + CAND + mot quelconque
+                if ana_useful.exists_linkword(short_window, linkwords) == True:
+                    valid_windows.append(short_window) #dans ce cas la fenetre valide est de type (CAND1 + CAND2) avec un mot de schéma entre eux .
+
+    # check if the aword in center is not the same 3 times or more (this case it would be better to build an expansion first, then an expression)
+    print('\n\n ###### \n BUFF des expre complexes: ', buff)
+    print('\nNOT EXPA INSIDE', not_expa_inside_expre(buff))
+    valid_windows.extend(not_expa_inside_expre(buff))
+    return valid_windows
+##############
 
 '''return a dict that looks like {shortshape: [valid_windows]}
 shortshape is composed of two candidates concatenanted CANDCAND (no awords, no stopwords)'''
@@ -135,15 +171,13 @@ def expression_find_cand(valid_windows, expression_threshold):
 def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold, log_file_path):
     dict_expre = {}
     for candidate in candidates:
-        candidate = [candidate]
+        candidate = [candidate] # in order to use the define_windows
         windows = ana_useful.define_windows(dict_occ_ref, candidate, 3, 1) #fenetre du type `CAND1 + (cand ou mot quelconque) + (cand ou mot quelconque)`. Les mots stop ("v") ne sont pas représentés
         valid_windows = []
         windows_cand_list = []
 
-        for window in windows:
-            valid_window = expression_valid_window(window, candidate, linkwords)
-            if valid_window: #évite les erreur dûes à une fenetre valide vide.
-                valid_windows.append(valid_window)
+        valid_windows = expression_valid_windows(windows, candidate[0], linkwords)
+
         if valid_windows != []:
             dict_cand_windows = expression_find_cand(valid_windows, expression_threshold)
 

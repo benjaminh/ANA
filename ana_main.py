@@ -17,8 +17,6 @@ stopword_file_path = 'test/stoplist_Fr.txt'
 bootstrap_file_path = 'test/bootstrap'
 linkwords_file_path = 'test/schema'
 log_file_path = 'test/log'
-stopword_pattern = ana_useful.stopword_regex(stopword_file_path)
-dict_occ_ref = ana_useful.text2occ(txt_file_path, stopword_file_path, bootstrap_file_path)
 
 # construire la liste cands à partir d'une recherche dans le dico des étiquettes et pas à partir du fichier bootstrap
 with open(bootstrap_file_path, 'r', encoding = 'utf8') as bootstrapfile:
@@ -28,12 +26,17 @@ print('BOOTSTRAP : ',cands)
 with open(linkwords_file_path, 'r', encoding = 'utf8') as linkwordsfile:
     linkwords = ana_useful.build_list(linkwordsfile)
 
+with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
+    stopwords = ana_useful.build_list(stopwordfile)
+
+dict_occ_ref = ana_useful.text2occ(txt_file_path, stopwords, cands)
+
 ########################################################################
 
 
 #SEUILS#################################################################
-nucleus_threshold = [3,5,5,10]
-#nucleus_threshold = [2,4,4,8]
+# nucleus_threshold = [3,5,5,10]
+nucleus_threshold = [2,4,4,8]
 '''
 Meme mot schema et même CAND
 Meme mot schema et CAND differents
@@ -56,16 +59,21 @@ with open(log_file_path, 'w', encoding = 'utf8') as logfile:
 dict_expa = {}
 dict_expre = {}
 
-for nb_passe in range(1, 10):
-    ana_useful.write_log(log_file_path,"\n\n########################################\n")
-    ana_useful.write_log(log_file_path, 'passe __ n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
-    ana_useful.write_log(log_file_path,"########################################\n")
-    dict_nucleus = ana_collect.nucleus_search(dict_occ_ref, cands, linkwords, nucleus_threshold, log_file_path)
+for nb_passe in range(1, 5):
+    dict_expa = {}
+    dict_expre = {}
+    for nucleus_steps in range(1, 3):
+        ana_useful.write_log(log_file_path,"\n\n########################################\n")
+        ana_useful.write_log(log_file_path, 'passe __ n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
+        ana_useful.write_log(log_file_path,"########################################\n")
+        dict_nucleus = ana_collect.nucleus_search(dict_occ_ref, cands, linkwords, nucleus_threshold, log_file_path)
+        ana_useful.conflict_manager(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, recession_threshold, log_file_path)
+        cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopwords)
 
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,'passe n°' + str(nb_passe) + " RECHERCHE D'EXPANSIONS\n")
     ana_useful.write_log(log_file_path,"########################################\n")
-    dict_expa = ana_collect.expansion_search(dict_occ_ref, cands, linkwords, stopword_pattern, expansion_threshold, log_file_path)
+    dict_expa = ana_collect.expansion_search(dict_occ_ref, cands, linkwords, stopwords, expansion_threshold, log_file_path)
 
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,'passe n°' + str(nb_passe) + " RECHERCHE D'EXPRESSIONS\n")
@@ -77,6 +85,6 @@ for nb_passe in range(1, 10):
     ana_useful.write_log(log_file_path,'passe n°' + str(nb_passe) + " GESTION DE CONFLITS ET VALIDATION'\n")
     ana_useful.write_log(log_file_path,"########################################\n")
     ana_useful.conflict_manager(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, recession_threshold, log_file_path)
-    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopword_pattern)
+    cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path, stopwords)
 
     print('CANDIDATS \n step n°',nb_passe, '\n', cands, '\n\n################# step n°',nb_passe+1, '#################\n')
