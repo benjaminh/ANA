@@ -112,7 +112,6 @@ def not_expa_inside_expre(windows):
     dict_awords_shape = ana_useful.merge_egal_sple_dictkeys(dict_awords_shape_seen)
 
     if dict_awords_shape != {}:
-        print('dict_aword_shape : ',dict_awords_shape)
         for aword_shape, windows in dict_awords_shape.items():
             if (0 < len(windows) < 3):
                 valid_windows_t3.extend(windows)
@@ -212,43 +211,7 @@ def dict_found_words(valid_windows):
         for occurrence in window: #a priori il n'y a qu'un seul t dans chaque fenetre'
             if occurrence[2] == 't':
                 dict_aword.setdefault(occurrence[1],[]).append(window)
-
-
-    # On nettoie le dico en utilisant l'égalité souple
-    # for exemple: 2 entries in dict_aword are "atelier" and "ateliers". They should be merged in th e dict_aword_2
-    dict_aword_2 = {}
-    done = []
-    # the dict of awords, is sorted by lenght of value's lis. This enable a stable behaviour.
-    all_awords_ordered = sorted(dict_aword, key=lambda aword_key: len(dict_aword[aword_key]), reverse=True)
-    for aword in all_awords_ordered:
-        if aword not in done:
-            dict_aword_2[aword] = dict_aword[aword] # place  the element in the dict and will look for similar terms to add at the same key
-            for aword2 in all_awords_ordered:
-                if aword != aword2 and ana_useful.egal_sple_term(aword, aword2):
-                    dict_aword_2[aword].extend(dict_aword[aword2])
-                    done.append(aword2)
-
-    # trouve la shortshape collectant le plus d'occurence parmis toutes les shortshapes en égalité souple.
-    # comme pour ranger une liste, on a un buff qui stocke la shortshape rattachée au plus d'occurrence.
-    # dico final est donc de la même shortshape que dict_aword ou dict_aword_2, à savoir, {'mot quelconque': [valid_windows]}
-    final_dict = {}
-    all_awords2_ordered = sorted(dict_aword_2, key=lambda aword_key: len(dict_aword_2[aword_key]), reverse=True)
-    for aword in all_awords2_ordered:
-        buff = {}
-        for aword2 in all_awords2_ordered:
-            if ana_useful.egal_sple_term(aword, aword2):
-                if len(dict_aword_2[aword]) > len(dict_aword_2[aword2]):
-                    if (aword not in buff):
-                        buff[aword] = dict_aword_2[aword]
-                        if aword2 in buff and aword != aword2:
-                            del(buff[aword2])
-                else:
-                    if (aword2 not in buff):
-                        buff[aword2] = dict_aword_2[aword2]
-                        if aword in buff and aword != aword2:
-                            del(buff[aword])
-        if list(buff.keys())[0] not in final_dict:
-            final_dict.update(buff)
+    final_dict = ana_useful.merge_egal_sple_dictkeys(dict_aword)
     return final_dict
 
 def nucleus_find_cand(dict_aword, nucleus_threshold, linkwords):

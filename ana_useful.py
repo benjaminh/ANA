@@ -291,6 +291,7 @@ def merge_egal_sple_dictkeys(*dict_args):
     '''
     the dicts should be with str type as key,
     based on egal_sple fonction.
+    the new key gathering all the merged keys (found in sple_egal) wil be the most occurring one.
     Given any number of dicts, shallow copy and merge into a new dict,
     based on egal_sple fonction.
     '''
@@ -298,17 +299,20 @@ def merge_egal_sple_dictkeys(*dict_args):
         merged = merge_dicts(dict_args)
     else:
         merged = dict_args[0]
-#TODO if one one key value pair in the merged dict then returns the dict
 
-    print(merged)
-    z = {}
-    seen = []
-    for key1 in merged:
-        for key2 in merged:
-            if egal_sple_term(key1, key2) and (key1 not in seen):
-                z.setdefault(key1, []).extend(merged[key2])  # concatenate the values of the the egal keys
-                seen.append(key2)
-    return z
+    if len(merged) == 1: # faster if there is only one pair of (key, value) in the dict!
+        return merged
+    else:
+        ordered_keys = sorted(merged, key=lambda clef: len(merged[clef]), reverse=True)
+        print(ordered_keys)
+        z = {}
+        seen = []
+        for key1 in ordered_keys:
+            for key2 in ordered_keys:
+                if egal_sple_term(key1, key2) and (key1 not in seen):
+                    z.setdefault(key1, []).extend(merged[key2])  # concatenate the values of the the egal keys
+                    seen.append(key2)
+        return z
 
 #get all the original positions of the occurences in a window
 def get_pos(window):
