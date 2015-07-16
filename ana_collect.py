@@ -47,8 +47,8 @@ def expansion_cand_search(valid_windows, expansion_threshold):
     # Vérification du dépassement de seuil, expansion est une "expansion potentielle" avant d'être validée et insérée dans le final_dict
     final_dict = {}
     for expansion in dict_cand_windows_norm:
-        if ( (len(dict_cand_windows[expansion])) >= expansion_threshold ):
-            final_dict[expansion] = dict_cand_windows[expansion]
+        if ( (len(dict_cand_windows_norm[expansion])) >= expansion_threshold ):
+            final_dict[expansion] = dict_cand_windows_norm[expansion]
     return final_dict
 
 
