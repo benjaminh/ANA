@@ -90,3 +90,5 @@ for nb_passe in range(1, 8):
     print('Variation du nombre de candidats :', diff)
 
     print('CANDIDATS \n step n°',nb_passe, '\n', cands, '\n\n################# step n°',nb_passe+1, '#################\n')
+
+ana_useful.write_output(cands, dict_occ_ref)

@@ -276,6 +276,29 @@ def cut_window(window, length):
             break
     return short_window
 
+def write_output(cands, dict_occ_ref):
+    with open('test/context.txt', 'w', encoding = 'utf8') as contextfile:
+        with open('test/output.txt', 'w', encoding = 'utf8') as outputfile:
+            dict_output = {}
+            contextfile.write("file for corrrelating the found candidates in their original context")
+            for cand in cands:
+                contextfile.write("\n\n################################ \n" + str(cand) + '\n################################\n')
+                windows = define_windows(dict_occ_ref, [cand], 5, 3)
+                dict_output[cand] = len(windows)
+                for window in windows:
+                    contextstr = ''
+                    for occ in window:
+                        if occ[1] in ['C', 'c', 'l', 'L', 's', 'S', 'm',  't', 'T', 'qu', 'D', 'd', 'N', 'n']:
+                            contextstr += (occ[1] + '\'')
+                        else:
+                            contextstr += (occ[1] + ' ')
+                    contextfile.write(str(contextstr)+'\n')
+            outputfile.write("keywords and occurrences\n\n")
+            cands_ordered = sorted(dict_output, key=lambda cand: dict_output[cand], reverse=True)
+            for key in cands_ordered:
+                outputfile.write(str(dict_output[key]) + ' :  ' + str(key) + '\n')
+
+
 def merge_dicts(dict_list):
     result = {}
     for dictionary in dict_list:
@@ -336,7 +359,7 @@ def recession(dict_occ_ref, threshold, log_file_path):
 #2. check if metting ends of differents cands is possible
 
 
-#2. check if cand is still occuring in the dict_occ-ref
+#2. check if cand is still occuring in the dict_occ_ref
     for candidate, position_list in dict_cand.items():
 
         if len(position_list) >= threshold:
