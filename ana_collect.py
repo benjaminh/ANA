@@ -9,73 +9,54 @@ from math import *
 # EXPANSION
 ##################################################################
 
-def expansion_valid_window(windows, linkwords):
+def expansion_valid_window(windows):
     valid_windows = []
     for window in windows:
-        exists_linkword = False
         for occurrence in window:
             if ana_useful.is_cand(occurrence):
                 pos_cand = window.index(occurrence)
-            if occurrence[1] in linkwords:
-                exists_linkword = True
+        left_window = window[:pos_cand+1]
+        right_window = window[pos_cand:]
+
+        exists_linkword_R = ana_useful.exists_linkword(right_window)
+        exists_linkword_L = ana_useful.exists_linkword(left_window)
+
+        clean_window = ana_useful.window_wo_fword(window)
         #Les expansions ne doivent pas contenir de mot de schéma
-        if not exists_linkword:
-            clean_window = ana_useful.window_wo_fword(window)
-            # Le CAND est forcément en position 2 par construction et suppression des mots v
-            if (clean_window[0][2] == 't' and clean_window[2][2] == 't'):
-                valid_windows.append(window[:pos_cand+1])
-                valid_windows.append(window[pos_cand:])
+        # Le CAND est forcément en position 2 par construction et suppression des mots v
+        if clean_window[2][2] == 't' and not exists_linkword_R:
+            valid_windows.append(window[pos_cand:])#RightWindow
+        if clean_window[0][2] == 't' and not exists_linkword_L:
+            valid_windows.append(window[:pos_cand+1])#LeftWindow
     return valid_windows
 
-def expansion_cand_search(valid_windows, stopword_pattern, expansion_threshold):
+def expansion_cand_search(valid_windows, expansion_threshold):
     shape_list = []
     dict_cand_windows = {}
-    norm_aword_list = []
-
     for window in valid_windows:
         shape = ''
         for occurrence in window:
             if (occurrence[2] not in ['t','v']):
-                shape += occurrence[2]
-                shape += ' '
+                shape += occurrence[2] + ' '
             if (occurrence[2] == 't'):
-                if norm_aword_list == []:
-                    norm_aword_list.append(occurrence[1].lower())
-                    shape += occurrence[1].lower()
-                    shape += ' '
-                else:
-                    found = False
-                    for norm_aword in norm_aword_list:
-                        if ana_useful.egal_sple_term(norm_aword,occurrence[1]):
-                            shape += norm_aword
-                            shape += ' '
-                            found = True
-                            break
-                    if found == False:
-                        norm_aword_list.append(occurrence[1].lower())
-                        shape += occurrence[1].lower()
-                        shape += ' '
-        shape_list.append(shape.strip())
-
-    # Construction d'un dictionnaire de valid_windows pour chaque shape
-    i = 0
-    for shape1 in shape_list:
-        dict_cand_windows.setdefault(shape1,[]).append(valid_windows[i])
-        i += 1
+                shape += occurrence[1] + ' '
+            shape.strip()
+        dict_cand_windows.setdefault(shape,[]).append(window)
+    dict_cand_windows_norm = ana_useful.merge_egal_sple_dictkeys(dict_cand_windows)
 
     # Vérification du dépassement de seuil, expansion est une "expansion potentielle" avant d'être validée et insérée dans le final_dict
     final_dict = {}
-    for expansion in dict_cand_windows:
+    for expansion in dict_cand_windows_norm:
         if ( (len(dict_cand_windows[expansion])) >= expansion_threshold ):
             final_dict[expansion] = dict_cand_windows[expansion]
     return final_dict
 
 
-def expansion_search(dict_occ_ref, candidates, linkwords, stopword_pattern, expansion_threshold, log_file_path):
+def expansion_search(dict_occ_ref, candidates, expansion_threshold, log_file_path):
     dict_expa = {}
     windows = ana_useful.define_windows(dict_occ_ref,candidates,3,2)
-    valid_windows = expansion_valid_window(windows, linkwords)
-    dict_cand_windows = expansion_cand_search(valid_windows, stopword_pattern, expansion_threshold)
+    valid_windows = expansion_valid_window(windows)
+    dict_cand_windows = expansion_cand_search(valid_windows, expansion_threshold)
 
     # Find the new cand and build a new dict and write in the log, what there is at this step.
     for shape in dict_cand_windows:
@@ -106,7 +87,6 @@ def not_expa_inside_expre(windows):
 
     for window in windows:
         aword_shape = ana_useful.aword_shape(window)
-        print('aword_shape', aword_shape)
         dict_awords_shape_seen.setdefault(aword_shape, []).append(window) # the strict eguality (on the aword) is ok. But remains the eglité souple.
 
     dict_awords_shape = ana_useful.merge_egal_sple_dictkeys(dict_awords_shape_seen)
@@ -119,13 +99,13 @@ def not_expa_inside_expre(windows):
 
 #schema = [au, aux, d',de, du, des, en] pourquoi pas "avec"
 #une fenetre valide ne contient que 2 CAND, séparés par un mot de schéma, avec éventuellement un mot 't' au milieu.
-def expression_valid_windows(windows, candidate, linkwords):
+def expression_valid_windows(windows, candidate):
     valid_window = []
     valid_windows = []
     buff = []
 
     for window in windows:
-        if (ana_useful.exists_linkword(window, linkwords) == True and ana_useful.count_cand(window) == 2):
+        if (ana_useful.exists_linkword(window) == True and ana_useful.count_cand(window) == 2):
             if ana_useful.is_cand(window[-1]): #list[-1] returns last item of the list
                 cand2 = ana_useful.which_cand([window[-1]])
                 if cand2[2] not in candidate.split(): #to avoid building expression like "bâtiment de cet ensemble de bâtiments" -> "batiment de bâtiment"
@@ -134,12 +114,10 @@ def expression_valid_windows(windows, candidate, linkwords):
             else:
                 short_window = ana_useful.cut_window(window, 2)
                 #Puisqu'on a 2 CAND et que la fenetre fait 3 mots et que le dernier mot n'est pas un CAND alors la fenetre était de type CAND + CAND + mot quelconque
-                if ana_useful.exists_linkword(short_window, linkwords) == True:
+                if ana_useful.exists_linkword(short_window) == True:
                     valid_windows.append(short_window) #dans ce cas la fenetre valide est de type (CAND1 + CAND2) avec un mot de schéma entre eux .
 
     # check if the aword in center is not the same 3 times or more (this case it would be better to build an expansion first, then an expression)
-    print('\n\n ###### \n BUFF des expre complexes: ', buff)
-    print('\nNOT EXPA INSIDE', not_expa_inside_expre(buff))
     valid_windows.extend(not_expa_inside_expre(buff))
     return valid_windows
 ##############
@@ -167,7 +145,7 @@ def expression_find_cand(valid_windows, expression_threshold):
     return dict_cand_windows
 
 
-def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold, log_file_path):
+def expression_search(dict_occ_ref, candidates, expression_threshold, log_file_path):
     dict_expre = {}
     for candidate in candidates:
         candidate = [candidate] # in order to use the define_windows
@@ -175,14 +153,14 @@ def expression_search(dict_occ_ref, candidates, linkwords, expression_threshold,
         valid_windows = []
         windows_cand_list = []
 
-        valid_windows = expression_valid_windows(windows, candidate[0], linkwords)
+        valid_windows = expression_valid_windows(windows, candidate[0])
 
         if valid_windows != []:
             dict_cand_windows = expression_find_cand(valid_windows, expression_threshold)
 
             if dict_cand_windows != {}:
                 for shortshape, windows_cand_list in dict_cand_windows.items():
-                    new_cand, occ_count = ana_useful.new_cand_expression(windows_cand_list, linkwords)
+                    new_cand, occ_count = ana_useful.new_cand_expression(windows_cand_list)
                     dict_expre[new_cand] = windows_cand_list
                     # dict_expre.setdefault(new_cand,[]).append(windows_cand_list)
 
@@ -214,7 +192,7 @@ def dict_found_words(valid_windows):
     final_dict = ana_useful.merge_egal_sple_dictkeys(dict_aword)
     return final_dict
 
-def nucleus_find_cand(dict_aword, nucleus_threshold, linkwords):
+def nucleus_find_cand(dict_aword, nucleus_threshold):
     dict_occ_cand = {}
     for shortshape, windows in dict_aword.items():
         count_s1 = 0 #Meme mot schema et même CAND
@@ -222,12 +200,12 @@ def nucleus_find_cand(dict_aword, nucleus_threshold, linkwords):
         count_s3 = 0 #Mot schema different et même CAND
         count_s4 = 0 #Mot schema different et CAND different
         for window in windows:
-            linkword = ana_useful.which_linkword(window, linkwords)
+            linkword = ana_useful.which_linkword(window)
             cand = ana_useful.which_cand(window)
 
             for window1 in windows:
                 if window1 != window:
-                    linkword1 = ana_useful.which_linkword(window1, linkwords)
+                    linkword1 = ana_useful.which_linkword(window1)
                     cand1 = ana_useful.which_cand(window1)
                     if linkword[1] == linkword1[1] and cand[2] == cand1[2]:
                         count_s1 += 1
@@ -247,34 +225,34 @@ def nucleus_find_cand(dict_aword, nucleus_threshold, linkwords):
 
 
 #doit retourner la fenetre tronquée valide contenant un mot (non CAND) lié à un CAND par un mot schéma (après ce CAND) ou none si ne trouve rien.
-def nucleus_valid_window(window, linkwords):
-    if ana_useful.exists_linkword(window, linkwords):
+def nucleus_valid_window(window):
+    if ana_useful.exists_linkword(window):
         for occurrence in window:
             index_cand = 0
             if ana_useful.is_cand(occurrence):
                 index_cand = window.index(occurrence)
                 break
         right_window = window[index_cand:]
-        if ana_useful.count_cand(right_window) < 2 and ana_useful.exists_linkword(right_window, linkwords):
+        if ana_useful.count_cand(right_window) < 2 and ana_useful.exists_linkword(right_window):
             return right_window
 
-def nucleus_search(dict_occ_ref, candidates, linkwords, nucleus_threshold, log_file_path):
+def nucleus_search(dict_occ_ref, candidates, nucleus_threshold, log_file_path):
     dict_nucleus = {}
     windows = ana_useful.define_windows(dict_occ_ref, candidates, 3, 2)
     valid_windows = []
     for window in windows:
-        valid_window = nucleus_valid_window(window, linkwords)
+        valid_window = nucleus_valid_window(window)
         if valid_window:
             valid_windows.append(valid_window)
 
         windowR = ana_useful.symmetric_window(window)
-        valid_windowR = nucleus_valid_window(windowR, linkwords)
+        valid_windowR = nucleus_valid_window(windowR)
         if valid_windowR:
             valid_window = ana_useful.symmetric_window(valid_windowR)
             valid_windows.append(valid_window)
 
     dict_aword = dict_found_words(valid_windows)
-    dict_occ_cand = nucleus_find_cand(dict_aword, nucleus_threshold, linkwords)
+    dict_occ_cand = nucleus_find_cand(dict_aword, nucleus_threshold)
 
     if dict_occ_cand != {}:
         for shortshape, occ_cand_list in dict_occ_cand.items():
@@ -286,5 +264,4 @@ def nucleus_search(dict_occ_ref, candidates, linkwords, nucleus_threshold, log_f
             ana_useful.write_log(log_file_path, '   LISTE DES OCCURRENCES')
             for occ_cand in occ_cand_list:
                 ana_useful.write_log(log_file_path, '   ' + str(occ_cand))
-            #print('SIMPLE TROUVE', shortshape, occ_cand_list)
     return dict_nucleus

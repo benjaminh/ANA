@@ -11,6 +11,27 @@ from collections import Counter
 #paramètre globaux ou initialisation#############################
 seuil_egal_sple = 8
 
+
+#prend un fichier ligne à ligne et construit une liste avec un élément dans la liste pour chaque ligne
+#file object est le produit de `open`
+def build_bootlist(fileobject):
+    global bootcands
+    lines = fileobject.readlines()
+    bootcands = list(map(lambda s: re.sub(r'\n', '', s), lines))
+    return bootcands
+
+def build_stoplist(stopword_file_path):
+    global stopwords
+    with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
+        lines = stopwordfile.readlines()
+        stopwords = list(map(lambda s: re.sub(r'\n', '', s), lines))
+
+def build_linklist(linkwords_file_path):
+    global linkwords
+    with open(linkwords_file_path, 'r', encoding = 'utf8') as linkwordsfile:
+        lines = linkwordsfile.readlines()
+        linkwords = list(map(lambda s: re.sub(r'\n', '', s), lines))
+
 #ecrire log
 def write_log(log_file_path, indication):
     with open(log_file_path, 'a', encoding = 'utf8') as logfile:
@@ -32,18 +53,6 @@ def accent_remove(lower_word):
     word = first_caracter + lower_word2
     return word
 
-#OBSOLETE
-#construit une regex de tous les stopWords
-# def stopword_pattern(stopword_file_path):
-#     with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
-#         stoplist = build_list(stopwordfile)
-#         # stoplist = map(lambda s: "\\b" + s + "\\b", stoplist)
-#         # stopstring = '|'.join(stoplist)
-#         # stopstring = '(?siu)' + '(' + stopstring + ')'
-#         # stopword_pattern = re.compile(stopstring)
-#         return stopword_pattern
-
-
 # attention div#0 si word1 == word2
 # utilisé pour egal_souple_term
 def close(word1, word2):
@@ -58,50 +67,42 @@ def egal_sple_term(word1, word2):
     if word1 != '' and word2 != '':
         word1 = accent_remove(word1.lower())
         word2 = accent_remove(word2.lower())
-        if ((word1 == word2) or (word2 == word1 + 's') or (word1 == word2 + 's') or (word2 == word1 + 'e') or (word1 == word2 + 'e') or (word1 == word2 + 'es') or (word2 == word1 + 'es')):
-            souple = True
-        elif word2[0] != word1[0]:
+        if word2[0] != word1[0]:
             souple = False
+        elif ((word1 == word2) or (word2 == word1 + 's') or (word1 == word2 + 's') or (word2 == word1 + 'e') or (word1 == word2 + 'e') or (word1 == word2 + 'es') or (word2 == word1 + 'es')):
+            souple = True
         else:
             closeness = close(word1, word2)
             if closeness > 1:
                 souple = True
     return souple
 
-#Prend 2 chaînes et retourne un booléen. Permet de définir si 2 chaînes sont égales. Retire les mots de la `stoplist` contenu dans les chaïnes. Calcul la sommes des proximités des paires de mots (chaine A, chaine B contiennent les paires A1 B1; A2 B2; A3 B3).
-def egal_sple_chain(string1, string2, stopwords_list):
+#Prend 2 chaînes et retourne un booléen. Permet de définir si 2 chaînes sont égales.
+#Attention: ne supporte pas les stopwords dans les chaïnes.
+#Calcul la sommes des proximités des paires de mots (chaine A, chaine B contiennent les paires A1 B1; A2 B2; A3 B3).
+def egal_sple_chain(s1, s2):
 #    st1 = re.sub(stopword_pattern, '', string1)
 #    st2 = re.sub(stopword_pattern, '', string2)
-    st1 = []
-    st2 = []
-    string1 = string1.split()
-    string2 = string2.split()
-    for word in string1:
-        word = word.lower()
-        if word not in stopwords_list:
-            st1.append(word)
-    for word in string2:
-        word = word.lower()
-        if word not in stopwords_list:
-            st2.append(word)
-    souple = True
-    if len(st1) != len(st2):
-        souple = False
+    souple = False
+    if ' '  in s1+s2:
+        string1 = s1.split()
+        string2 = s2.split()
+        if len(string1) == len(string2):
+            souple = True
+            i = 0
+            for word in string1:
+                if not egal_sple_term(string2[i], word):
+                    souple = False
+                    break
+                i += 1
     else:
-        for word in st1:
-            if not egal_sple_term(st2[st1.index(word)], word):
-                souple = False
+        souple = egal_sple_term(s1, s2)
     return souple
 
-#prend un fichier ligne à ligne et construit une liste avec un élément dans la liste pour chaque ligne
-#file object est le produit de `open`
-def build_list(fileobject):
-    lines = fileobject.readlines()
-    list_out = list(map(lambda s: re.sub(r'\n', '', s), lines))
-    return list_out
+
 
 # in dict_occ_ref, the keys are 'position' and the values are [shape, status, history]. str shape; str status; list of occurrence(s) history
-def text2occ(txt_file_path, stopwords_list, cands):
+def text2occ(txt_file_path):
     dict_occ_ref = {}
     i = 0
     with open(txt_file_path, 'r', encoding = 'utf8') as txtfile:
@@ -113,10 +114,10 @@ def text2occ(txt_file_path, stopwords_list, cands):
             lower_word = word.lower()
             i += 1
             marked = False
-            if (lower_word in stopwords_list) or (re.match(r'(\b\d+\b)', word) and not re.match(r'(1\d\d\d|20\d\d)', word)): #les chiffres sont des 'v' mais pas les dates.:
+            if (lower_word in stopwords) or (re.match(r'(\b\d+\b)', word) and not re.match(r'(1\d\d\d|20\d\d)', word)): #les chiffres sont des 'v' mais pas les dates.:
                 marked = True
                 dict_occ_ref[i] = word, 'v', [] #the history is empty at the begining
-            for cand in cands:
+            for cand in bootcands:
                 egaux = egal_sple_term(cand, lower_word)
                 if egaux == True:
                     marked = True
@@ -134,12 +135,6 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
     for cand in candidates:
         for key, value in dict_occ_ref.items():
             window =[]
-            try:
-                if cand == value[1]:
-                    pass
-            except:
-                print("problem with cand, key, value in define_window", cand, key, value)
-
             if cand == value[1]: #trouve les étiquettes contenant candidat dans le dico
                 #construit une window composée d'étiquettes
                 window.append([key,value[0],value[1], value[2]]) #ajoute l'occurrence du candidat trouvé dans la fenetre
@@ -207,14 +202,14 @@ def which_cand(window):
         if is_cand(occurrence):
             return occurrence
 
-def exists_linkword(window, linkwords):
+def exists_linkword(window):
     exists_linkword = False
     for occurrence in window:
         if occurrence[1] in linkwords:
             exists_linkword = True
     return exists_linkword
 
-def which_linkword(window, linkwords):
+def which_linkword(window):
     for occurrence in window:
         if occurrence[1] in linkwords:
             return occurrence
@@ -230,7 +225,7 @@ def aword_shape(window):
 
 #prend une liste de window candidates et retourne un tuple [string, int] contenant le new_cand_shape et son occurence
 #the new_cand_shape is CAND1 + last_linkword + CAND2.
-def new_cand_expression(windows_cand_list, linkwords):
+def new_cand_expression(windows_cand_list):
     shapes =[]
     for window in windows_cand_list:
         shape_list = []
@@ -281,9 +276,9 @@ def cut_window(window, length):
             break
     return short_window
 
-def merge_dicts(*dict_args):
+def merge_dicts(dict_list):
     result = {}
-    for dictionary in dict_args:
+    for dictionary in dict_list:
         result.update(dictionary)
     return result
 
@@ -304,13 +299,12 @@ def merge_egal_sple_dictkeys(*dict_args):
         return merged
     else:
         ordered_keys = sorted(merged, key=lambda clef: len(merged[clef]), reverse=True)
-        print(ordered_keys)
         z = {}
         seen = []
         for key1 in ordered_keys:
             for key2 in ordered_keys:
-                if egal_sple_term(key1, key2) and (key1 not in seen):
-                    z.setdefault(key1, []).extend(merged[key2])  # concatenate the values of the the egal keys
+                if (egal_sple_chain(key1, key2) and key2 not in seen):
+                    z.setdefault(key1, []).extend(merged[key2])  # concatenate the value of the the egal keys
                     seen.append(key2)
         return z
 
@@ -332,15 +326,19 @@ def where_R_nucleus(dict_occ_ref, cand_shape):
     return occ_list
 
 
-def recession(dict_occ_ref, threshold, log_file_path, stopwords_list):
+def recession(dict_occ_ref, threshold, log_file_path):
     cands = []
     dict_cand = {}
 #1. build a dico, to count the occurrences of each candidate.
     for position, value in dict_occ_ref.items():
         if value[1] not in ['v', 't']:
             dict_cand.setdefault(value[1],[]).append(position) # ajoute la position de chaque forme candidate trouvé dans un dico, à la clef "candidat"
+#2. check if metting ends of differents cands is possible
+
+
 #2. check if cand is still occuring in the dict_occ-ref
     for candidate, position_list in dict_cand.items():
+
         if len(position_list) >= threshold:
             cands.append(candidate)
         else: #supprime ce CAND et redécompose en occurrence ancienne grace à history
@@ -407,56 +405,57 @@ def conflict_manager(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, threshol
     tampon = []
 ##### for the nucleuses
     # 1: building the dict containing all the occurences to modify in the dict_occ_ref
-    all_nucleus_dict = {}
-    for new_cand_shape in dict_nucleus:
-        occ_list = where_R_nucleus(dict_occ_ref, new_cand_shape)
-        all_nucleus_dict[new_cand_shape] = occ_list
-    # 2: modify by most occuring form
-    #sort the dictionary in a tuple (cand shape, [occ_list]), in which the first item contain the most occuring cand_shape.
-    #NB: the nucleuses are composed by a unique word, so a unique occurence, so there are no "windows" but only opccurences
-    all_nucleus_ordered = sorted(all_nucleus_dict, key=lambda new_cand_shape: len(all_nucleus_dict[new_cand_shape]), reverse=True)
-    for new_cand_shape in all_nucleus_ordered:
-        occurrences = all_nucleus_dict[new_cand_shape]
-        for occ in occurrences:
-            if occ[0] not in seen:
-                seen.append(occ[0])
-                admission(dict_occ_ref, occ, new_cand_shape, log_file_path)
-        write_log(log_file_path, 'NUCLEUS ADMIS ' + str(new_cand_shape) + ' ' + str(len(occurrences)))
+    if dict_nucleus != {}:
+        all_nucleus_dict = {}
+        for new_cand_shape in dict_nucleus:
+            occ_list = where_R_nucleus(dict_occ_ref, new_cand_shape)
+            all_nucleus_dict[new_cand_shape] = occ_list
+        # 2: modify by most occuring form
+        #sort the dictionary in a tuple (cand shape, [occ_list]), in which the first item contain the most occuring cand_shape.
+        #NB: the nucleuses are composed by a unique word, so a unique occurence, so there are no "windows" but only opccurences
+        all_nucleus_ordered = sorted(all_nucleus_dict, key=lambda new_cand_shape: len(all_nucleus_dict[new_cand_shape]), reverse=True)
+        for new_cand_shape in all_nucleus_ordered:
+            occurrences = all_nucleus_dict[new_cand_shape]
+            if len(occurrences) > (threshold-1):
+                for occ in occurrences:
+                    # if occ[0] not in seen:
+                    #     seen.append(occ[0])
+                    admission(dict_occ_ref, occ, new_cand_shape, log_file_path)
+                write_log(log_file_path, 'NUCLEUS ADMIS ' + str(new_cand_shape) + ' ' + str(len(occurrences)))
 
 
 ##### for the other new_cands
-    all_cands_dict = {}
-    all_cands_dict.update(dict_expa)
-    all_cands_dict.update(dict_expre) #concatenante the 2 dicts
+    if dict_expa != {} or dict_expre != {}:
+        all_cands_dict = merge_egal_sple_dictkeys(dict_expa, dict_expre)
 
-    tampon = []
-    #trie le dictionnaire en un tuple (cand shape, [occ_list]) dont le premier item contient le cand_shape ayant le plus d'occurences
-    all_candshape_ordered = sorted(all_cands_dict, key=lambda new_cand_shape: len(all_cands_dict[new_cand_shape]), reverse=True)
-
-    for new_cand_shape in all_candshape_ordered:
-        windows = all_cands_dict[new_cand_shape]
-        passed = False #to know if the new_cand has been accepted
-        seen_buff = [] #to count the number of accepted occurrences (not in conflict with a previous one)
-        buff = []
-        occ_count = threshold #initialized with the smallest possible. THe count begin when the threshold is crossed
-        for window in windows:
-            pos_list = get_pos(window)
-            deja_vu =  any((True for x in pos_list if x in seen)) # doesn't enter in the loop if one of the position has allready be seen this step.
-            if not deja_vu:
-                if passed: # passed if true only if there are more than 3 elements to modify
-                    seen.extend(pos_list)
-                    admission(dict_occ_ref, window, new_cand_shape, log_file_path)
-                    occ_count += 1
-                else: # until there are 3 elements to modify
-                    buff.append(window)
-                    seen_buff.extend(pos_list)
-                    if len(buff) == threshold: #  where there are 3 elements t modify (threshold crossed)
-                        seen.extend(seen_buff)
-                        for window in buff: # admission only accepts one window
+        tampon = []
+        #trie le dictionnaire en un tuple (cand shape, [occ_list]) dont le premier item contient le cand_shape ayant le plus d'occurences
+        all_candshape_ordered = sorted(all_cands_dict, key=lambda new_cand_shape: len(all_cands_dict[new_cand_shape]), reverse=True)
+        for new_cand_shape in all_candshape_ordered:
+            windows = all_cands_dict[new_cand_shape]
+            if len(windows) >= threshold:
+                passed = False #to know if the new_cand has been accepted
+                seen_buff = [] #to count the number of accepted occurrences (not in conflict with a previous one)
+                buff = []
+                occ_count = threshold #initialized with the smallest possible. THe count begin when the threshold is crossed
+                for window in windows:
+                    pos_list = get_pos(window)
+                    deja_vu =  any((True for x in pos_list if x in seen)) # doesn't enter in the loop if one of the position has allready be seen this step.
+                    if not deja_vu:
+                        if passed: # passed if true only if there are more than 3 elements to modify
+                            seen.extend(pos_list)
                             admission(dict_occ_ref, window, new_cand_shape, log_file_path)
-                        passed = True
-        if passed:
-            write_log(log_file_path, 'CANDIDAT ADMIS ' + str(new_cand_shape) + ' ' + str(occ_count))
+                            occ_count += 1
+                        else: # until there are 3 elements to modify
+                            buff.append(window)
+                            seen_buff.extend(pos_list)
+                            if len(buff) == threshold: #  where there are 3 elements t modify (threshold crossed)
+                                seen.extend(seen_buff)
+                                for window in buff: # admission only accepts one window
+                                    admission(dict_occ_ref, window, new_cand_shape, log_file_path)
+                                passed = True
+                if passed:
+                    write_log(log_file_path, 'CANDIDAT ADMIS ' + str(new_cand_shape) + ' ' + str(occ_count))
 
 
 #
