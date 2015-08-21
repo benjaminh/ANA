@@ -104,7 +104,8 @@ def egal_sple_chain(s1, s2):
 # in dict_occ_ref, the keys are 'position' and the values are [shape, status, history]. str shape; str status; list of occurrence(s) history
 def text2occ(txt_file_path):
     dict_occ_ref = {}
-    i = 0
+    i = 3
+    dict_occ_ref[1] = ' ', 't', [] #fake first occurrence just to avoid having a cand in first position.
     with open(txt_file_path, 'r', encoding = 'utf8') as txtfile:
         text = txtfile.read()
         #texte = re.sub('-', '_', texte) # pour éviter de perdre les traits d'union '-'
@@ -124,6 +125,7 @@ def text2occ(txt_file_path):
                     dict_occ_ref[i] = word, cand, [] #the history is empty at the begining
             if marked == False:
                 dict_occ_ref[i] = word, 't', [] #the history is empty at the begining
+        dict_occ_ref[i+1] = ' ', 't', [] #fake last occurrence just to avoid having a cand in last position.
         return dict_occ_ref
 
 
@@ -153,8 +155,14 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
                             count_fw += 1
                 # boucle pour insérer autant d'étiquettes que demandées (paramètres width et cand_pos) avant le candidat (les stopwords (de type noté 'v') ne comptent pas)
                 while count_bw < before_cand:
+                    # print('count_bw', count_bw)
+                    # print('before_cand', before_cand)
                     key2 -=1
+                    # print('key', key)
+                    # if key2>0:
+                    #     print('key2', key2)
                     if key2 in dict_occ_ref:
+                        print('\t', dict_occ_ref[key2])
                         occurrence = [key2]
                         occurrence.extend(dict_occ_ref[key2])
                         window.insert(0, occurrence) #insere les occurrence en début de window. occurrence de la forme [indice, mot, typemot, history]
@@ -283,6 +291,7 @@ def write_output(cands, dict_occ_ref):
             contextfile.write("file for corrrelating the found candidates in their original context")
             for cand in cands:
                 contextfile.write("\n\n################################ \n" + str(cand) + '\n################################\n')
+                dict_occ_ref[0] = '\n', 't', [] #fake first occurrence to be able to write the context of an eventual first occurrence cand
                 windows = define_windows(dict_occ_ref, [cand], 5, 3)
                 dict_output[cand] = len(windows)
                 for window in windows:
