@@ -115,7 +115,7 @@ def text2occ(txt_file_path):
             lower_word = word.lower()
             i += 1
             marked = False
-            if (lower_word in stopwords) or (re.match(r'(\b\d+\b)', word) and not re.match(r'(1\d\d\d|20\d\d)', word)): #les chiffres sont des 'v' mais pas les dates.:
+            if (lower_word in stopwords) or re.match(r'wxcv[\d|_]*wxcv', word) or (re.match(r'(\b\d+\b)', word) and not re.match(r'(1\d\d\d|20\d\d)', word)): #les chiffres sont des 'v' mais pas les dates.:
                 marked = True
                 dict_occ_ref[i] = word, 'v', [] #the history is empty at the begining
             for cand in bootcands:
@@ -155,14 +155,8 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
                             count_fw += 1
                 # boucle pour insérer autant d'étiquettes que demandées (paramètres width et cand_pos) avant le candidat (les stopwords (de type noté 'v') ne comptent pas)
                 while count_bw < before_cand:
-                    # print('count_bw', count_bw)
-                    # print('before_cand', before_cand)
                     key2 -=1
-                    # print('key', key)
-                    # if key2>0:
-                    #     print('key2', key2)
                     if key2 in dict_occ_ref:
-                        print('\t', dict_occ_ref[key2])
                         occurrence = [key2]
                         occurrence.extend(dict_occ_ref[key2])
                         window.insert(0, occurrence) #insere les occurrence en début de window. occurrence de la forme [indice, mot, typemot, history]
@@ -287,25 +281,65 @@ def cut_window(window, length):
 def write_output(cands, dict_occ_ref):
     with open('test/context.txt', 'w', encoding = 'utf8') as contextfile:
         with open('test/output.txt', 'w', encoding = 'utf8') as outputfile:
-            dict_output = {}
-            contextfile.write("file for corrrelating the found candidates in their original context")
+                dict_output = {}
+                dict_bypage = {}
+                contextfile.write("file for corrrelating the found candidates in their original context")
+                for cand in cands:
+                    contextfile.write("\n\n################################ \n" + str(cand) + '\n################################\n')
+                    dict_occ_ref[0] = '\n', 't', [] #fake first occurrence to be able to write the context of an eventual first occurrence cand
+                    windows = define_windows(dict_occ_ref, [cand], 5, 3)
+                    dict_output[cand] = len(windows) # number of occurrences found (how many context windows)
+                    for window in windows:
+                        contextstr = ''
+                        for occ in window:
+                            if occ[1] in ['C', 'c', 'l', 'L', 's', 'S', 'm',  't', 'T', 'qu', 'D', 'd', 'N', 'n']: #re-create the 'lost apostrophes'
+                                contextstr += (occ[1] + '\'')
+                            else:
+                                contextstr += (occ[1] + ' ') #re-create the 'lost spaces'
+                        contextfile.write(str(contextstr)+'\n')
+                outputfile.write("keywords and occurrences\n\n")
+                cands_ordered = sorted(dict_output, key=lambda cand: dict_output[cand], reverse=True)
+                for key in cands_ordered:
+                    outputfile.write(str(dict_output[key]) + ' :  ' + str(key) + '\n')
+
+
+
+#####################################################################################################################
+################################## POST-PROCESSING ##################################################################
+#####################################################################################################################
+
+def create_keyword_page(page_name, cands):
+    with open(page_name, 'w', encoding = 'utf8') as keypage:
+        if cands != []:
             for cand in cands:
-                contextfile.write("\n\n################################ \n" + str(cand) + '\n################################\n')
-                dict_occ_ref[0] = '\n', 't', [] #fake first occurrence to be able to write the context of an eventual first occurrence cand
-                windows = define_windows(dict_occ_ref, [cand], 5, 3)
-                dict_output[cand] = len(windows)
-                for window in windows:
-                    contextstr = ''
-                    for occ in window:
-                        if occ[1] in ['C', 'c', 'l', 'L', 's', 'S', 'm',  't', 'T', 'qu', 'D', 'd', 'N', 'n']:
-                            contextstr += (occ[1] + '\'')
-                        else:
-                            contextstr += (occ[1] + ' ')
-                    contextfile.write(str(contextstr)+'\n')
-            outputfile.write("keywords and occurrences\n\n")
-            cands_ordered = sorted(dict_output, key=lambda cand: dict_output[cand], reverse=True)
-            for key in cands_ordered:
-                outputfile.write(str(dict_output[key]) + ' :  ' + str(key) + '\n')
+                keypage.write(cand + '\n')
+
+def tagging_pages(dict_occ_ref):
+    if not os.path.exists('test/keywords/'):
+    	os.makedirs('test/keywords/')
+    page = '0.0.0'
+    for pos, value in dict_occ_ref.items():
+        if value[1] == 'v':
+            if re.match(r'wxcv[\d|_]*wxcv', value[0]):
+                print('partie trouvée')
+                page = re.findall(r'(?<=wxcv)([\d|_]*)(?=wxcv)', value[0])
+                page_name = 'test/keywords/page' + page[0] + '.key'
+        if value[1] not in ['v', 't']: #catch les cands
+            print('value', value[1])
+            dict_bypage.setdefault(page_name, []).append(value[1])
+    for page_name, cands in dict_bypage.items():
+        create_keyword_page(page_name, cands)
+
+#supposint the user via interface produces a csv file, based on the final cands list.
+# this file is:
+#   modified (bool),  anafound_cand (str),    user_defined_cand (str)
+#
+# def post_supervised(dict_occ_ref):
+#     with open()
+
+#####################################################################################################################
+################################ END OF POST-PROCESSING #############################################################
+#####################################################################################################################
 
 
 def merge_dicts(dict_list):

@@ -11,7 +11,7 @@ import sys
 # if sys.argv[1]:
 #     txt_file_path = sys.argv[1]
 # else:
-txt_file_path = 'test/txt.txt.cleaned'
+txt_file_path = 'test/text4ana.txt'
 
 stopword_file_path = 'test/stoplist_Fr.txt'
 bootstrap_file_path = 'test/bootstrap'
@@ -58,7 +58,7 @@ with open(log_file_path, 'w', encoding = 'utf8') as logfile:
 dict_expa = {}
 dict_expre = {}
 
-for nb_passe in range(1, 8):
+for nb_passe in range(1, 5):
     dict_expa = {}
     dict_expre = {}
     for nucleus_steps in range(1, 3):
