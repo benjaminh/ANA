@@ -5,26 +5,32 @@ import ana_useful
 import ana_collect
 import re
 import sys
-
+import os
+import ntpath
 
 #FICHIERS D'ENTREE#####################################################
-# if sys.argv[1]:
-#     txt_file_path = sys.argv[1]
-# else:
-txt_file_path = 'test/text4ana.txt'
+linkwords_file_path = 'french/schema'
+stopword_file_path = 'french/stoplist_Fr.txt'
+ana_useful.build_linklist(linkwords_file_path)
+ana_useful.build_stoplist(stopword_file_path)
+########################
 
-stopword_file_path = 'test/stoplist_Fr.txt'
-bootstrap_file_path = 'test/bootstrap'
-linkwords_file_path = 'test/schema'
-log_file_path = 'test/log'
+txt_file_path_fromhere = 'memoire1_test2/text4ana.txt'
+path = os.path.dirname(os.path.realpath(txt_file_path_fromhere))
+os.chdir(path)
+
+txt_file_path = ntpath.basename(txt_file_path_fromhere)
+bootstrap_file_path = 'bootstrap'
+
+if not os.path.exists('output/'):
+	os.makedirs('output/')
+log_file_path = 'output/log'
 
 # construire la liste cands à partir d'une recherche dans le dico des étiquettes et pas à partir du fichier bootstrap
 with open(bootstrap_file_path, 'r', encoding = 'utf8') as bootstrapfile:
     cands = ana_useful.build_bootlist(bootstrapfile)
 print('BOOTSTRAP : ',cands)
 
-ana_useful.build_linklist(linkwords_file_path)
-ana_useful.build_stoplist(stopword_file_path)
 dict_occ_ref = ana_useful.text2occ(txt_file_path)
 
 ########################################################################
@@ -58,7 +64,7 @@ with open(log_file_path, 'w', encoding = 'utf8') as logfile:
 dict_expa = {}
 dict_expre = {}
 
-for nb_passe in range(1, 5):
+for nb_passe in range(1, 3):
     dict_expa = {}
     dict_expre = {}
     for nucleus_steps in range(1, 3):

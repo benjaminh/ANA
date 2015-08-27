@@ -279,10 +279,9 @@ def cut_window(window, length):
     return short_window
 
 def write_output(cands, dict_occ_ref):
-    with open('test/context.txt', 'w', encoding = 'utf8') as contextfile:
-        with open('test/output.txt', 'w', encoding = 'utf8') as outputfile:
+    with open('output/context.txt', 'w', encoding = 'utf8') as contextfile:
+        with open('output/keywords.txt', 'w', encoding = 'utf8') as outputfile:
                 dict_output = {}
-                dict_bypage = {}
                 contextfile.write("file for corrrelating the found candidates in their original context")
                 for cand in cands:
                     contextfile.write("\n\n################################ \n" + str(cand) + '\n################################\n')
@@ -301,7 +300,7 @@ def write_output(cands, dict_occ_ref):
                 cands_ordered = sorted(dict_output, key=lambda cand: dict_output[cand], reverse=True)
                 for key in cands_ordered:
                     outputfile.write(str(dict_output[key]) + ' :  ' + str(key) + '\n')
-
+    tagging_pages(dict_occ_ref)
 
 
 #####################################################################################################################
@@ -315,15 +314,16 @@ def create_keyword_page(page_name, cands):
                 keypage.write(cand + '\n')
 
 def tagging_pages(dict_occ_ref):
-    if not os.path.exists('test/keywords/'):
-    	os.makedirs('test/keywords/')
+    dict_bypage = {}
+    if not os.path.exists('output/keywords/'):
+    	os.makedirs('output/keywords/')
     page = '0.0.0'
     for pos, value in dict_occ_ref.items():
         if value[1] == 'v':
             if re.match(r'wxcv[\d|_]*wxcv', value[0]):
                 print('partie trouvée')
                 page = re.findall(r'(?<=wxcv)([\d|_]*)(?=wxcv)', value[0])
-                page_name = 'test/keywords/page' + page[0] + '.key'
+                page_name = 'output/keywords/page' + page[0] + '.key'
         if value[1] not in ['v', 't']: #catch les cands
             print('value', value[1])
             dict_bypage.setdefault(page_name, []).append(value[1])
