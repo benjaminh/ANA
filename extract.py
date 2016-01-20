@@ -3,7 +3,6 @@
 import useful
 import objects
 
-
 # en meta: il faut 1 dict pour les occurrences + 1 set pour les candidats
 # ce sont nos 2 types d'objets typiques.
 
@@ -17,11 +16,11 @@ def nucleus_step(OCC, CAND, nucleus_threshold):
         window = cand.nuc_window(OCC)# key:t_word_pos; value: (cand_id, link_word_type)
         twords_dict.update(window)
 
-    twordsmerged = usefull.merge_egal_sple_dict(twords_dict)
+    twordsmerged = useful.merge_egal_sple_dict(twords_dict)
     #key: shortest shape in soft_equality;
     #value dict{"equal_key":set of (occurrence_position), "equal_values": tuple of tuples(cand_id, link_word_type)}
     for case in twordsmerged:
-        vector = usefull.count_nuc_cases(twordsmerged[case])
+        vector = useful.count_nuc_cases(twordsmerged[case])
             #vector is tuple like this
             # s1: same linkword same CAND
             # s2: same linkword, different CAND
@@ -45,10 +44,10 @@ def expression_step(OCC, CAND, expression_threshold, expansion_threshold):
         # tword_window{key :tword_inside_pos; value: (tuple of occurrence_position)}
         for couple in window:
             expansions = set()#to store the tword_pos that can be expansion inside expression
-            if len(window[couple])<expression_threshold:#no need to look further, this will never become an expression
+            if len(window[couple]) < expression_threshold:#no need to look further, this will never become an expression
                 continue#next couple in the loop
             if len(windowinside[couple]) >= expansion_threshold:#there may be an expa inside the expre!
-                expansions = usefull.soft_equality_set(windowinside[couple], OCC, expansion_threshold)
+                expansions = useful.soft_equality_set(windowinside[couple], OCC, expansion_threshold)
                 #expansions is a set of tuple containing the position of equals tword (len(tuple) >= expansion_threshold)
                 #if expa then, there is an expansion inside, but there is maybe still enough occurrences to build expre and expa (later)
             if not expansions:#it is valid expression!
@@ -67,6 +66,6 @@ def expression_step(OCC, CAND, expression_threshold, expansion_threshold):
     # on a les couple AB et BC...
     # d'abord ceux qui ont le  moins d'occurrences
     next_id = len(CAND) + 1
-    long_shape = usefull.expre_shape(couple, CAND)
+    long_shape = useful.expre_shape(couple, CAND)
     CAND[next_id] = Expression(idi = next_id, where = window[couple], long_shape = long_shape)#new CAND is created
     CAND[next_id].build(OCC)

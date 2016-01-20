@@ -44,7 +44,7 @@ class Occurrence:
         self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
         return (self.cand, self.cand_pos)
 
-    def soft_eguality(self, occ2):
+    def soft_equality(self, occ2):
         '''
         Prend 2 termes et retourne un booléen.
         Permet de définir si 2 termes sont égaux, en calculant une proximité entre eux.
@@ -76,11 +76,11 @@ class Candidat:
     canot inherit from the occurrence class, because is composed by multiple occurrences, in a "standart form"
     '''
 
-    def __init__(self, idi = 0, where = set(), name = False, long_shape = ''):
+    def __init__(self, idi = 0, where = set(), protected = False, long_shape = ''):
         self.id = idi
         self.where = where #set of tuple of occurrences positions. ex: ((15,16,17), (119,120,121), (185,186,187)) for long cands like expression
-        self.name = name # is it a propernoun: a place, a personn... (begin with a uppercase)
-        self.long_shape = long_shape
+        self.protected = protected # Protected if it is a propernoun: a place, a person... (begin with a uppercase)
+        self.long_shape = long_shape # Normalized shape
 
 
     def nuc_window(self, OCC):#OCC is dict_occ_ref
@@ -168,7 +168,7 @@ class Candidat:
         called from the all the cand instances,
         for expression search based on all the cands,
         returns 3 dicts:
-            # window{key :tuple(cand_id, nextcand_id); value: set of (tuple of occurrence_position)}
+            # window{key :tuple(cand_id, nextcand_id); value: set of (tuple of occurrence_position)}. Ex :
             # windowinside{key :tuple(cand_id, nextcand_id); value: set of (tword_inside_pos)}
             # tword_window{key :tword_inside_pos; value: (tuple of occurrence_position)}
         '''
@@ -185,6 +185,7 @@ class Candidat:
             tword_inside = None
             while tword_inside_count<2:
                 i += 1
+                #TODO check linkword
                 if OCC[cand_posmax+i].cand:
                     key = (self.id, OCC[cand_posmax+i].cand)# tuple(cand_id, nextcand_id)
                     value = tuple(range(cand_posmin, max(OCC[cand_posmax+i].cand_pos)))# match till the the end tail of the cand
@@ -210,7 +211,7 @@ class Candidat:
             return True#to destry the entry in the diict CAND from outside
 
 
-class Nucleus(candidat):
+class Nucleus(Candidat):
     '''
     on cherche des mots rattachés à n'importe quel candidat par un mot de schéma.
     ex: couleurs de FLEUR, couleur de MUR, colleur de CARTON (c'est un exemple problematique)
@@ -232,7 +233,7 @@ class Nucleus(candidat):
         for occur in OCC:
             #TODO evaluate if this is too slow and not a good benefit for word spoting
             for where in self.where:#try to match any of the shapes that allready matched
-                if occur not in self.where and occur.soft_eguality(where):
+                if occur not in self.where and occur.soft_equality(where):
                     self.where.add((occur,))#add the position (as a tuple of 1 integer) of the occurrence in soft equality
                     break
 
@@ -248,7 +249,7 @@ class Nucleus(candidat):
 
 
 
-class Expression(candidat):
+class Expression(Candidat):
     '''
     on cherche des duo de candidats liés par un mot de schéma, contenant éventuellement 1 tword
     ex: COULEUR de petite FLEUR, COULEUR de grande FLEUR, COULEUR de FLEUR

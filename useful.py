@@ -28,10 +28,10 @@ def merge_egal_sple_dict(*dict_args, OCC):
             equal_keys.add(key1)
             equal_values = (merged[key1],)#tuple init, not set because maybe duplicates
             for key2 in ordered_keys:
-                if (OCC[key1].soft_eguality(OCC[key2]) and key2 not in equal_keys):
-                    egual_keys.add(key2)
-                    egual_values += (merged[key2])
-            z[OCC[key1].ascii_shape] = {"equal_key":egual_keys, "equal_values":equal_values}
+                if (OCC[key1].soft_equality(OCC[key2]) and key2 not in equal_keys):
+                    equal_keys.add(key2)
+                    equal_values += (merged[key2])
+            z[OCC[key1].ascii_shape] = {"equal_key":equal_keys, "equal_values":equal_values}
         return z
 
 
