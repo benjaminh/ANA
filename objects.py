@@ -19,30 +19,54 @@ class Occurrence:
         self.cand = 0 #an eventual reference to a cand_id
         self.cand_pos = set()#set of neighbours that are part of the same cand
         self.date = False #is it a date?
-        self.stopword = False #is it a stop word?
+        # self.stopword = False #is it a stop word? USELESS
         self.linkword = 0 # or value by the line number in the schema file: [1:de, 2:du, 3:des, 4:d, 5:au, 6:aux, 7:en]
         self.tword = False # is a normal_word?
         self.hist = [] # the old references to the past cand states
 
-    def set_cand(self, cand_id, cand_pos):
-        old_cand = (self.cand, tuple(sorted(self.cand_pos)))#need to copy in a (immutable) tuple to store that state (set are mutable)"sorted to match easily the normal sorted form"
-        #TODO: old cand trie plusieurs fois la même chose, (pour chaq occurrence lié au cand) -> pas très efficace
-        self.hist.append(old_cand)# save the old reference to the cand
+    def set_cand(self, cand_id, cand_pos, CAND):
+        self._unlink(CAND)
         self.cand = cand_id# point to a new cand id
         self.cand_pos = cand_pos# get the new whole cand position it is part of
-        return old_cand# to remove the inverse pointing reference in the cand obj
+
+    def _unlink(CAND):
+        if self.cand:
+            #TODO: old_pos trie plusieurs fois la même chose, (pour chaq occurrence lié au cand) -> pas très efficace
+            old_pos = tuple(sorted(self.cand_pos))#need to copy in a (immutable) tuple to store that state (set are mutable)
+            #"sorted to match the normal sorted form"
+            CAND[self.cand].where.remove(old_pos)
+            old_cand = (self.cand, old_pos)
+            self.hist.append(old_cand)# save the old reference to the cand
+        elif self.linkword:#a cand is not anymore a linkword nor anything
+            self.hist.append(self.linkword)
+            self.linkword = False
+        elif self.tword:#a cand is not anymore a tword nor anything
+            self.hist.append(self.tword)
+            self.tword = False
+
 
     def set_shapes(self):
         if not self.date:
             # self.set_ascii_longshape()
-            self.ascii_shape = [rm_accent[caract] for caract in self.long_shape.lower() if caract in rm_accent] #if charac in the dict of accentuated charact, then replace it by its non-accentuated match
+            ascii_shape = [rm_accent[caract] for caract in self.long_shape.lower() if caract in rm_accent] #if charac in the dict of accentuated charact, then replace it by its non-accentuated match
             self.ascii_shape = ''.join(ascii_shape)
-            self.short_shape = [caract for caract in self.ascii_shape if (Rconsonne.match(caract) and len(short_shape)<4)] #the 3 first charactere from the ascii shape
+            short_shape = [caract for caract in self.ascii_shape if (Rconsonne.match(caract) and len(short_shape)<4)] #the 3 first charactere from the ascii shape
             self.short_shape = ''.join(short_shape)
 
     def recession(self):
-        self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
-        return (self.cand, self.cand_pos)
+        if len(self.hist)>1:
+            self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
+            return (self.cand, self.cand_pos)
+        else: #retrieve the initial state of the occ (not a CAND )
+            self.cand = False
+            self.cand_pos = set()
+            state = hist.pop()
+            if type(state)==bool:
+                self.tword = True
+            elif type(state)==int:
+                self.linkword = state
+            else:
+                self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
 
     def soft_equality(self, occ2):
         '''
@@ -139,11 +163,11 @@ class Candidat:
 
     def expa_window(self, OCC):#OCC is dict_occ_ref
         '''
-        called from the all the cand instances,
-        for expansion search based on all the cands,
+        called from the each of the cand instances,
+        for expansion search based on each cand,
         returns a dict with
-            key :  cand_id
-            value: set of tword_pos
+            key : tword_pos
+            value: tuple(cand_position)
         '''
         found = {}
 
@@ -158,7 +182,7 @@ class Candidat:
                 elif OCC[cand_posmax+i].linkword: #stops the while loop. if there is a linkword this shape is more likely to be a nucleus
                     break#faster than done=True
                 elif OCC[cand_posmax+i].tword:
-                    found.setdefault(self.id, set()).add(cand_posmax+i)
+                    found[cand_posmax+i] = positions
                     done = True
         return found
 
@@ -167,37 +191,33 @@ class Candidat:
         '''
         called from the all the cand instances,
         for expression search based on all the cands,
-        returns 3 dicts:
-            # window{key :tuple(cand_id, nextcand_id); value: set of (tuple of occurrence_position)}. Ex :
-            # windowinside{key :tuple(cand_id, nextcand_id); value: set of (tword_inside_pos)}
-            # tword_window{key :tword_inside_pos; value: (tuple of occurrence_position)}
+        returns 2 dicts:
+            # expre_where{tuple(cand_id, nextcand_id): set of tuples(cand_positions)}
+            # expre_what{tuple(cand_positions): set of tuple(occ_pos of the ptential expre)}
         '''
 
-        window = {}
+        expre_where = {}
+        expre_what = {}
 
         for positions in self.where:#position is a tuple of occurrence positions for the cand. ex: ((15,16,17), (119,120,121), (185,186,187))
-            done = False
-            tword_inside_pos = None
             cand_posmin = min(positions)
             cand_posmax = max(positions)#get the extrems tails of the cand position in the tuple. ex    17           121            187
             i = 0
             tword_inside_count = 0
-            tword_inside = None
+            linkword = False
             while tword_inside_count<2:
                 i += 1
-                #TODO check linkword
-                if OCC[cand_posmax+i].cand:
-                    key = (self.id, OCC[cand_posmax+i].cand)# tuple(cand_id, nextcand_id)
-                    value = tuple(range(cand_posmin, max(OCC[cand_posmax+i].cand_pos)))# match till the the end tail of the cand
-                    window.setdefault(key, set()).add(value)
-                    if tword_inside:
-                        windowinside.setdefault(key, set()).add(tword_inside)
-                        tword_window[tword_inside] = value
+                if OCC[cand_posmax+i].linkword:
+                    linkword = True
+                elif OCC[cand_posmax+i].cand and linkword == True:
+                    couple = (self.id, OCC[cand_posmax+i].cand)# tuple(cand_id, nextcand_id)
+                    expre_pos = tuple(range(cand_posmin, max(OCC[cand_posmax+i].cand_pos)))# match till the the end tail of the next_cand
+                    expre_where.setdefault(couple, set()).add(positions)
+                    expre_what[positions] = expre_pos
                     break
                 elif OCC[cand_posmax+i].tword:
-                    tword_inside = cand_posmax+i
                     tword_inside_count += 1
-        return (window, windowinside, tword_window)
+        return exprewhere, exprewhat
 
 
     def _unlink(self, occurrences):#to remove the pointed occurrences in the where att of the cand
@@ -209,6 +229,13 @@ class Candidat:
                 for position in occurrences:
                     OCC[position].recession()#remove the actual link to a cand in occ instance and replace it by the previous one
             return True#to destry the entry in the diict CAND from outside
+
+
+    def build(self, OCC, CAND):
+        for cand_pos in self.where:#expre_pos is a candcand range of position
+            new_pos = set(cand_pos)
+            for occ_pos in cand_pos:
+                OCC[occ_pos].set_cand(self.id, new_pos, CAND)
 
 
 class Nucleus(Candidat):
@@ -237,42 +264,7 @@ class Nucleus(Candidat):
                     self.where.add((occur,))#add the position (as a tuple of 1 integer) of the occurrence in soft equality
                     break
 
-    def _twords2nuc(self, OCC):
-        for new_nuc in self.where:#self.where is a set of tuple of one integer: set((1,), (5,), (18,))
-            old_cand = OCC[new_nuc[0]].set_cand(self.id)
-            #if old_cand:#not very likely / impossible?
 
-    def build(self, OCC):
+    def buildnuc(self, OCC):
         self._search_all_twords(OCC)#search for all the occurrences of this nex nucleus in the whole text
-        self._twords2nuc(OCC)#transform the twords in nucleus
-
-
-
-
-class Expression(Candidat):
-    '''
-    on cherche des duo de candidats liés par un mot de schéma, contenant éventuellement 1 tword
-    ex: COULEUR de petite FLEUR, COULEUR de grande FLEUR, COULEUR de FLEUR
-    -> construira le COULEUR DE FLEUR
-    '''
-    #TODO
-    # inclusion ou non de t_word dans les fenetres de nucleus? then not expa inside nucleus !hard!
-
-
-    def __init__(self, **kwargs):
-        super(Expression, self).__init__(**kwargs)
-        # FYI
-        # self.id = idi
-        # self.where = where #set of tuple of occurrences positions. ex: ((15,16,17), (119,120,121), (185,186,187)) for long cands like expression
-        # self.name = name # is it a propernoun: a place, a personn... (begin with a uppercase)
-        # self.long_shape = long_shape
-
-
-    def build(self, OCC, CAND):
-        for expre_pos in self.where:#expre_pos is a candcand range of position
-            new_pos = set(expre_pos)
-            for occ_pos in expre_pos:
-                OCC[occ_pos].set_cand(self.id, new_pos, CAND)
-                # oldcand_id, oldcand_pos = OCC[occ_pos].set_cand(self.id, new_pos, )#old_cand_pos is tuple(sorted(old_cand_pos)))
-                # to_remove.setdefault(oldcand_id, set()).add(oldcand_pos)
-        # return to_remove
+        self.build(OCC)#transform the twords in nucleus
