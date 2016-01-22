@@ -26,9 +26,9 @@ def nucleus_step(OCC, CAND, nucleus_threshold):
             # s3: different linkword, same CAND
             # s4: different linkword, different CAND
         if any[True for x in range(3) if vector[x] >= nucleus_threshold[x]]:
-            next_id = len(CAND) + 1
+            next_id = max(CAND) + 1
             CAND[next_id] = Nucleus(idi = next_id, where = twordsmerged[case], name = False)#new CAND is created
-            CAND[next_id].build(OCC)
+            CAND[next_id].buildnuc(OCC)
     del twordsmerged#we don't need it anymore
 
 ##########################
@@ -39,61 +39,42 @@ def nucleus_step(OCC, CAND, nucleus_threshold):
 #
 def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
     for cand_id in CAND:
-        expawin = CAND[cand_id].expa_window(OCC)# {t_word_pos: tuple(cand_positions)
+        expawin = CAND[cand_id].expa_window(OCC)# {t_word_pos: tuple_cand_positions)
         exprewhere, exprewhat = CAND[cand_id].expre_window(OCC)
         # expre_where{tuple(cand_id, nextcand_id): set of tuples(cand_positions)}
         # expre_what{tuple(cand_positions): tuple(occ_pos of the ptential expre)}
 
         #conflict management
         #first: check for forbidden positions, because valid expa
-        expawinmerged  = useful.merge_egal_sple_dict(expawin)
+        expawinmerged  = useful.merge_egal_sple_dict(expawin)# {tuple(t_word_pos):tuple of (tuple_cand_positions)}
         forbid = set()
         for expa_twords_eq in expawinmerged:
             if len(expa_twords_eq) > expansion_threshold:
-                #TODO build expa
-                forbid.add(set(expawinmerged[expa_twords_eq]))# forbid = set(cand_positions)
+                forbid.add(set(expawinmerged[expa_twords_eq]))# forbid = set(tuple_cand_positions)
+                #Build the cand by the way...
+                where = set()
+                for valid_tword in expa_twords_eq:# for t_word in the tuple of equivalent t_words
+                    where.add(tuple(range(min(expawin[valid_tword]),valid_tword)))# tuple: all lintegers between  min of the cand positions and tword position
+                next_id = max(CAND) + 1
+                CAND[next_id] = Candidat(idi = next_id, where = where, name = False)#new CAND is created
+                CAND[next_id].build(OCC)
         #second: remove the forbidden position from the expre_windows
         for couple in expre_where:
-            if len(expre_where[couple]) > expression_threshold:# set of tuples(cand_positions)
+            if len(expre_where[couple]) > expression_threshold:# set of tuples(cand_positions). the other, not long enough are rejected
                 for cand_positions in expre_where[couple]:#for each tuple of cand_positions
                     if cand_positions in not in forbid:
                         exprewin.setdefault(couple, set()).add(expre_what[cand_positions])#retrieve the whole expre pos from the single first cand_pos
-        for couple in exprewin:
+
+        for couple in sorted(exprewin, key=lambda couple: len(exprewin[couple])):#the less occuring expre first
             if len(exprewin[couple]) > expression_threshold:
-                #TODO build expre
+                next_id = max(CAND) + 1
+                CAND[next_id] = Candidat(idi = next_id, where = exprewin[couple], name = False)#new CAND is created
+                CAND[next_id].build(OCC)
 
 
 
-# def expression_step(OCC, CAND, expression_threshold, expansion_threshold):
-#     for cand in CAND:
-#         window, windowinside, tword_window = cand.expre_window(OCC)
-#         # window{key :tuple(cand_id, nextcand_id); value: set of (tuple of occurrence_position)}
-#         # windowinside{key :tuple(cand_id, nextcand_id); value: set of (tword_inside_pos)}
-#         # tword_window{key :tword_inside_pos; value: (tuple of occurrence_position)}
-#         for couple in window:
-#             expansions = set()#to store the tword_pos that can be expansion inside expression
-#             if len(window[couple]) < expression_threshold:#no need to look further, this will never become an expression
-#                 continue#next couple in the loop
-#             if len(windowinside[couple]) >= expansion_threshold:#there may be an expa inside the expre!
-#                 expansions = useful.soft_equality_set(windowinside[couple], OCC, expansion_threshold)
-#                 #expansions is a set of tuple containing the position of equals tword (len(tuple) >= expansion_threshold)
-#                 #if expa then, there is an expansion inside, but there is maybe still enough occurrences to build expre and expa (later)
-#             if not expansions:#it is valid expression!
-#                 valid_expre[couple] = window[couple]
-#                 continue
-#             if expansions:#removing the future expansion inside windows
-#                 occs_set = copy.copy(window[couple])#set of (tuple of occurrence_position) #cannot modify the dict in live and direct
-#                 twords_pos = [item for expa in expansions for item in expa]#flattening the data; get the problematic twords_pos
-#                 for tword_pos in twords_pos:
-#                     if occs_set.remove(tword_window[tword_pos])
-#                 if len(occs_set) >= expression_threshold:
-#                     valid_expre[couple] = occs_set
-#
 #     #TODO ordre de traitement des expre et gérer les conflicts
 #     #dans le cas A de chose B de truc C
 #     # on a les couple AB et BC...
-#     # d'abord ceux qui ont le  moins d'occurrences
-#     next_id = len(CAND) + 1
-#     long_shape = useful.expre_shape(couple, CAND)
-#     CAND[next_id] = Expression(idi = next_id, where = window[couple], long_shape = long_shape)#new CAND is created
-#     CAND[next_id].build(OCC)
+#     # d'abord ceux qui ont le  moins d'occurrences ou bien le contraire ??
+#      pourquoi pas d'abord ceux qui ont le moins d'occurrence, dans la limite de ne pas empecher la formation de ceux qui en ont le plus!

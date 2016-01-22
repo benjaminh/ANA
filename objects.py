@@ -34,7 +34,7 @@ class Occurrence:
             #TODO: old_pos trie plusieurs fois la même chose, (pour chaq occurrence lié au cand) -> pas très efficace
             old_pos = tuple(sorted(self.cand_pos))#need to copy in a (immutable) tuple to store that state (set are mutable)
             #"sorted to match the normal sorted form"
-            CAND[self.cand].where.remove(old_pos)
+            CAND[self.cand].unlink(old_pos)
             old_cand = (self.cand, old_pos)
             self.hist.append(old_cand)# save the old reference to the cand
         elif self.linkword:#a cand is not anymore a linkword nor anything
