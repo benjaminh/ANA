@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 import re
+import logging
+import useful
+import distance
 # en meta: il faut 1 dict pour les occurrences + 1 set pour les candidats
 # ce sont nos 2 types d'objets typiques.
 
@@ -30,7 +33,7 @@ class Occurrence:
         self.cand = cand_id# point to a new cand id
         self.cand_pos = cand_pos# get the new whole cand position it is part of
 
-    def _unlink(CAND):
+    def _unlink(self, CAND):
         if self.cand:
             #TODO: old_pos trie plusieurs fois la même chose, (pour chaq occurrence lié au cand) -> pas très efficace
             old_pos = tuple(sorted(self.cand_pos))# need to copy in a (immutable) tuple to store that state (set are mutable)
@@ -70,9 +73,10 @@ class Occurrence:
     def set_shapes(self):
         if not self.date:
             # self.set_ascii_longshape()
-            ascii_shape = [rm_accent[caract] for caract in self.long_shape.lower() if caract in rm_accent] #if charac in the dict of accentuated charact, then replace it by its non-accentuated match
+            ascii_shape = [rm_accent[caract] if caract in rm_accent else caract for caract in self.long_shape.lower()] #if charac in the dict of accentuated charact, then replace it by its non-accentuated match
             self.ascii_shape = ''.join(ascii_shape)
-            short_shape = [caract for caract in self.ascii_shape if (Rconsonne.match(caract) and len(short_shape)<4)] #the 3 first charactere from the ascii shape
+            short_shape = [caract for caract in self.ascii_shape if (Rconsonne.match(caract))] #the 3 first charactere from the ascii shape
+            short_shape = short_shape[:3]
             self.short_shape = ''.join(short_shape)
 
     def soft_equality(self, occ2):
@@ -111,6 +115,7 @@ class Candidat:
         self.id = idi
         self.where = where #set of tuple of occurrences positions. ex: ((15,16,17), (119,120,121), (185,186,187)) for long cands like expression
         self.protected = protected # Protected if it is a propernoun: a place, a person... (begin with a uppercase)
+        logging.info('Cand created n°'+ str(self.id) + ' there: ' + str(self.where))
         # self.long_shape = long_shape # Normalized shape
 
     def nuc_window(self, OCC):#OCC is dict_occ_ref
@@ -215,7 +220,7 @@ class Candidat:
             while tword_inside_count<2:
                 i += 1
                 if OCC[cand_posmax+i].linkword:
-                    linkword = True
+                    linkword = True#FIXME why is it usefull to check for linkword??
                 elif OCC[cand_posmax+i].cand and linkword == True:
                     couple = (self.id, OCC[cand_posmax+i].cand)# tuple(cand_id, nextcand_id)
                     expre_pos = tuple(range(cand_posmin, max(OCC[cand_posmax+i].cand_pos)))# match till the the end tail of the next_cand

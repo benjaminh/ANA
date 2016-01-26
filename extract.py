@@ -48,26 +48,26 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
         forbid = set()
         for expa_twords_eq in expawinmerged:
             if len(expa_twords_eq) > expansion_threshold:
-                forbid.add(set(expawinmerged[expa_twords_eq]))# forbid = set(tuple_cand_positions)
-                #Build the cand by the way...
-                where = set()
+                forbid.union(set(expawinmerged[expa_twords_eq]))# forbid = set(tuple_cand_positions)
+                #Build the cand expa (inside or not) by the way...
                 for valid_tword in expa_twords_eq:# for t_word in the tuple of equivalent t_words
                     where.add(tuple(range(min(expawin[valid_tword]),valid_tword)))# tuple: all lintegers between  min of the cand positions and tword position
                 next_id = max(CAND) + 1
-                CAND[next_id] = Candidat(idi = next_id, where = where)#new CAND is created
+                CAND[next_id] = objects.Candidat(idi = next_id, where = where)#new CAND is created
                 CAND[next_id].build(OCC)
-        #second: remove the forbidden position from the expre_windows
+        #second: remove the allready  position from the expre_windows
         for couple in expre_where:
             if len(expre_where[couple]) > expression_threshold:# set of tuples(cand_positions). the other, not long enough are rejected
                 for cand_positions in expre_where[couple]:#for each tuple of cand_positions
                     if cand_positions not in forbid:
                         exprewin.setdefault(couple, set()).add(expre_what[cand_positions])#retrieve the whole expre pos from the single first cand_pos
+        #third : building the new expre, starting with the less occurring ones. Managing conflicts for cases like A de B de C
         for couple in sorted(exprewin, key=lambda couple: len(exprewin[couple])):#the less occuring expre first
-         #TODO ordre de traitement des expre et gérer les conflicts:
+         #FIXME ordre de traitement des expre et gérer les conflicts:
          # d'abord ceux qui ont le moins d'occurrence, dans la limite de ne pas empecher la formation de ceux qui en ont le plus!
             if len(exprewin[couple]) > expression_threshold:
                 next_id = max(CAND) + 1
-                CAND[next_id] = Candidat(idi = next_id, where = exprewin[couple])#new CAND is created
+                CAND[next_id] = objects.Candidat(idi = next_id, where = exprewin[couple])#new CAND is created
                 CAND[next_id].build(OCC)
 
 ##########################

@@ -1,3 +1,21 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+import os
+import logging
+import re
+import objects
+import json
+
+def setupfolder(working_directory):
+    if not os.path.exists('output/'):
+        os.makedirs('output/')#keywords, what_in_page, where_keyword...
+    if not os.path.exists('log/'):
+        os.makedirs('log/')#log, stuff
+    elif os.path.isfile('log/ana.log'):
+        os.remove('log/ana.log')
+    if not os.path.exists('intra/'):
+        os.makedirs('intra/')#mapping, pages_pos,
+
 def merge_dicts(dict_list):
     result = {}
     for dictionary in dict_list:
@@ -83,22 +101,25 @@ def count_nuc_cases(merged):
 #         if len(eq) >= threshold:
 #             equals.add(eq)
 
-def build_bootlist(bootstrap_file_path):
-    with open(stopword_file_path, 'r', encoding='utf8') as bootstrapfile:
-    text = bootstrapfile.read()
-    cands = re.split('\W+', text)
-    for i, cand in enumerate(cands):
-        bootstrap[i] = Occurrence(long_shape = cand, cand = 0, cand_pos = set(), date = False, linkword = 0, tword = True)
-    return bootstrap
+def build_bootdict(bootstrap_file_path):
+    with open(bootstrap_file_path, 'r', encoding='utf8') as bootstrapfile:
+        text = bootstrapfile.read()
+        cands = re.split('\W+', text)
+        bootstrap = {}
+        for i, cand in enumerate(cands):
+            if cand:
+                bootstrap[i] = objects.Occurrence(long_shape = cand, cand = 0, cand_pos = set(), date = False, linkword = 0, tword = True)
+        return bootstrap
 
-def build_stoplist(stopword_file_path):
+def build_stopset(stopword_file_path):
     with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
         lines = stopwordfile.readlines()
         return set([re.sub(r'\n', '', s) for s in lines])
 
-def build_linklist(linkwords_file_path):# basicaly in french {de:1, du:1, des:1, d:1, au:5, aux:5, en:6}
+def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1, d:1, au:2, aux:2, en:3}
     with open(linkwords_file_path, 'r', encoding = 'utf8') as linkwordsfile:
         lines = linkwordsfile.readlines()
+        linkwords = {}
         for i, line in enumerate(lines):
             line = re.sub('\s+$', '', line)
             line = re.split('\W+', line)
@@ -106,13 +127,19 @@ def build_linklist(linkwords_file_path):# basicaly in french {de:1, du:1, des:1,
                 linkwords[linkword] = i
         return linkwords
 
-#ecrire log
-def write_log(log_file_path, indication):
-    with open(log_file_path, 'a', encoding = 'utf8') as logfile:
-        logfile.write(indication + '\n')
+# #ecrire log
+# def write_log(working_directory, indication):
+#     log_file_path = os.path.join(working_directory, 'log', 'ana.log')
+#     with open(log_file_path, 'a', encoding = 'utf8') as logfile:
+#         logfile.write(indication + '\n')
 
 #jsonpagespos_path is to store the position of the markers spliting the original pages in the concatenated txt4ana.txt
-def build_OCC(text_file_path, stopwords, linkwords, bootstrap, jsonpagespos_path):
+def build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_path, working_directory):
+    bootstrap = build_bootdict(bootstrap_file_path)
+    occ2boot = {}
+    propernouns = {}
+    stopwords = build_stopset(stopwords_file_path)
+    linkwords = build_linkdict(linkwords_file_path)
     Rsplitermark = re.compile(r'wxcv[\d|_]*wxcv')#TODO build a splitermark regex
     Rwordsinline = re.compile(r'(\w+[’|\']?|[.,!?;])(?siu)')
     Rdate = re.compile(r'(1\d\d\d|20\d\d)')
@@ -120,8 +147,11 @@ def build_OCC(text_file_path, stopwords, linkwords, bootstrap, jsonpagespos_path
     Rponctuation = re.compile(r'[,!?;]')
     dotahead = False
     index = 0
+    page_id = None#initial state to catch the first marker (see below)
     pages_pos = {}# dict {key:id of the page, value: tuple(begin_occ_pos, end_occ_pos)
-    with open(txt_file_path, 'r', encoding = 'utf8') as txtfile:
+    OCC = {}
+    CAND = {}
+    with open(txt4ana, 'r', encoding = 'utf8') as txtfile:
         for line in txtfile:
             words = Rwordsinline.findall(line)
             for word in words:
@@ -132,37 +162,48 @@ def build_OCC(text_file_path, stopwords, linkwords, bootstrap, jsonpagespos_path
                         pages_pos[page_id] += (index,)#last used page_id is still valid and close the last
                     page_id = re.findall(r'([\_|\d]+)', word)[0]#get the new page id
                     pages_pos[page_id] = (index+1,)#begining of the next page
-                elif word in stopwords or numeral.match(word):
-                    OCC[index] = Occurrence(long_shape = word)
+                elif word in linkwords:
+                    OCC[index] = objects.Occurrence(long_shape = word, linkword = linkwords[word])
                     dotahead = False
-                elif re.match(r'.', word):
+                elif re.match(r'\.', word):
+                    OCC[index] = objects.Occurrence(long_shape = word)
                     dotahead = True
-                elif Rponctuation.match(word)
-                    OCC[index] = Occurrence(long_shape = word)
-                elif Rdate.match(word)):#IDEA is it interesting to have dates as tword?
-                    OCC[index] = Occurrence(long_shape = word, date = True, tword = True)
+                elif Rdate.match(word):#IDEA is it interesting to have dates as tword?
+                    OCC[index] = objects.Occurrence(long_shape = word, date = True, tword = True)
                     dotahead = False
-                elif word.lower() in linkwords:
-                    OCC[index] = Occurrence(long_shape = word, linkword = linkwords[word])
+                elif word.lower() in stopwords or Rnumeral.match(word) or Rponctuation.match(word):
+                    OCC[index] = objects.Occurrence(long_shape = word)
                     dotahead = False
-                    continue
                 else:
-                    OCC[index] = Occurrence(long_shape = word, tword = True)
-                    for ind in bootstrap:#bootstrap is a dict Occurrences objects
-                        if OCC[index].soft_equality(bootstrap[ind]):
-                            occ2boot.setdefault(ind, set()).add(tuple([index]))
+                    OCC[index] = objects.Occurrence(long_shape = word, tword = True)
+                    for indice in bootstrap:#bootstrap is a dict Occurrences objects
+                        if OCC[index].soft_equality(bootstrap[indice]):
+                            occ2boot.setdefault(indice, set()).add(tuple([index]))
                             continue
-                    if dotahead = False and word[0].isupper() and words.index(word) == 0:#no dot before and uppercase and not begining of a newline -> it is a propernoun
-                        occ2bootprotec.setdefault(word, set()).add(tuple([index]))
-        for ind in occ2boot:# building the cand from the all the occ matching with bootstrap words
+                    if dotahead == False and word[0].isupper() and words.index(word) != 0:#no dot before and uppercase and not begining of a newline -> it is a propernoun
+                        propernouns.setdefault(word, set()).add(tuple([index]))
+        pages_pos[page_id] += (index,)#closing the last page
+        for indice in occ2boot:# building the cand from the all the occ matching with bootstrap words
             try:
                 next_id = max(CAND)+1
             except ValueError:#this means it is the first cand, there is no value for max
                 next_id = 0
-            CAND[next_id] = Candidat(idi = next_id, where = occ2boot[ind])
+            CAND[next_id] = objects.Candidat(idi = next_id, where = occ2boot[indice])
+            CAND[next_id].build(OCC, CAND)
+        for propernoun in propernouns:
+            next_id = max(CAND)+1
+            CAND[next_id] = objects.Candidat(idi = next_id, where = propernouns[propernoun], protected = True)
+            CAND[next_id].build(OCC, CAND)
+        #writing a file mapping the concatenated file with their start_po end_pos in the OCC dict
+        jsonpagespos_path = os.path.join(working_directory, 'intra', 'pages_pos.json')
         with open(jsonpagespos_path, 'w') as jsonpages:#TODO ok pour un JSON file? il fera le lien entre le mots clef et les noeuds neo4j?
             json.dump(pages_pos, jsonpages, ensure_ascii=False, indent=4)
-
+    return OCC, CAND
                 #TODO build the cands protected
                 #FIXME how to build Atelier et Chantier if Atelier and Chantier are allready cands -> no linkword, nothing helps to build it!
                 #TODO build neo4j nods corresponding to the pages. (should have been done before, in preANA step)
+
+
+#TODO function to build a long shape for the cand at the end
+#maybe some option for this shape building?
+#maybe the user can choose one among others
