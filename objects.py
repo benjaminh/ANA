@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-
+import re
 # en meta: il faut 1 dict pour les occurrences + 1 set pour les candidats
 # ce sont nos 2 types d'objets typiques.
 
 Rconsonne = re.compile(r'[zrtypqsdfghjklmwxcvbn](?u)')
-global rm_accent = {'é':'e', 'è':'e', 'ê':'e', 'ë':'e', 'ù':'u', 'û':'u', 'ü':'u',
-    'ç':'c', 'ô':'o', 'ö':'o', 'œ':'oe', 'î':'i', 'ï':'i', 'â':'a', 'à':'a', 'ä':'a'}
+global rm_accent
+rm_accent = {'é':'e', 'è':'e', 'ê':'e', 'ë':'e', 'ù':'u', 'û':'u', 'ü':'u','ç':'c', 'ô':'o', 'ö':'o', 'œ':'oe', 'î':'i', 'ï':'i', 'â':'a', 'à':'a', 'ä':'a'}
 # global accent = {'é':'e', 'è', 'ê', 'ë', 'ù', 'û', 'ü', 'ç', 'ô', 'ö', 'œ', 'î', 'ï', 'â', 'à', 'ä']
 # global wo_accent = ['e', 'e', 'e', 'e', 'u', 'u', 'u', 'c', 'o', 'o', 'oe', 'i', 'i', 'a', 'a', 'a']
 SEUIL_EGAL_SPLE = 7
 
 class Occurrence:
-    def __init__(self):
-        self.short_shape = '' #only to compare words
-        self.long_shape = '' #keeping the long in a original utf8 format
-        self.ascii_shape = '' # the long shape without accent and cédille
-        self.cand = 0 #an eventual reference to a cand_id
-        self.cand_pos = set()#set of neighbours that are part of the same cand
-        self.date = False #is it a date?
+    def __init__(self, long_shape, cand = 0, cand_pos = set(), date = False, linkword = 0, tword = False):
+        self.short_shape = ''#only to compare words
+        self.long_shape = long_shape#keeping the long in a original utf8 format
+        self.ascii_shape = ''# the long shape without accent and cédille
+        self.cand = cand# an eventual reference to a cand_id
+        self.cand_pos = cand_pos# set of neighbours that are part of the same cand
+        self.date = date# is it a date?
         # self.stopword = False #is it a stop word? USELESS
-        self.linkword = 0 # or value by the line number in the schema file: [1:de, 2:du, 3:des, 4:d, 5:au, 6:aux, 7:en]
-        self.tword = False # is a normal_word?
-        self.hist = [] # the old references to the past cand states
+        self.linkword = linkword# or value by the line number in the schema file: [1:de, 2:du, 3:des, 4:d, 5:au, 6:aux, 7:en]
+        self.tword = tword# is a normal_word?
+        self.hist = []# the old references to the past cand states
+        self.set_shapes()# build the shapes of the occ
 
     def set_cand(self, cand_id, cand_pos, CAND):
         self._unlink(CAND)
@@ -32,18 +33,39 @@ class Occurrence:
     def _unlink(CAND):
         if self.cand:
             #TODO: old_pos trie plusieurs fois la même chose, (pour chaq occurrence lié au cand) -> pas très efficace
-            old_pos = tuple(sorted(self.cand_pos))#need to copy in a (immutable) tuple to store that state (set are mutable)
+            old_pos = tuple(sorted(self.cand_pos))# need to copy in a (immutable) tuple to store that state (set are mutable)
             #"sorted to match the normal sorted form"
-            CAND[self.cand].unlink(old_pos)
+            CAND[self.cand]._unlink(old_pos)
             old_cand = (self.cand, old_pos)
             self.hist.append(old_cand)# save the old reference to the cand
-        elif self.linkword:#a cand is not anymore a linkword nor anything
+        elif self.linkword:# a cand is not anymore a linkword nor anything
             self.hist.append(self.linkword)
             self.linkword = False
-        elif self.tword:#a cand is not anymore a tword nor anything
+        elif self.tword:# a cand is not anymore a tword nor anything
             self.hist.append(self.tword)
             self.tword = False
 
+    def _relink(self, CAND):
+        if self.cand in CAND:# if the 'retored' cand still exists
+            CAND[self.cand].where.add(self.cand_pos)
+        else:#another recession...#TODO: think if there is a way to stop loop, in case of three cand branches recessing toghether to same root cand
+            self._recession(self, CAND)
+
+    def _recession(self, CAND):
+        if len(self.hist)>1:
+            self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
+        else:# retrieve the initial state of the occ (not a CAND )
+            self.cand = False
+            self.cand_pos = set()
+            state = hist.pop()
+            if type(state)==bool:# it is a tword
+                self.tword = True
+            elif type(state)==int:# it is a linkword
+                self.linkword = state
+            else:# it was a cand from the bootstrap
+                self.cand, self.cand_pos = state
+        if self.cand:
+            self._relink(CAND)
 
     def set_shapes(self):
         if not self.date:
@@ -52,21 +74,6 @@ class Occurrence:
             self.ascii_shape = ''.join(ascii_shape)
             short_shape = [caract for caract in self.ascii_shape if (Rconsonne.match(caract) and len(short_shape)<4)] #the 3 first charactere from the ascii shape
             self.short_shape = ''.join(short_shape)
-
-    def recession(self):
-        if len(self.hist)>1:
-            self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
-            return (self.cand, self.cand_pos)
-        else: #retrieve the initial state of the occ (not a CAND )
-            self.cand = False
-            self.cand_pos = set()
-            state = hist.pop()
-            if type(state)==bool:
-                self.tword = True
-            elif type(state)==int:
-                self.linkword = state
-            else:
-                self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
 
     def soft_equality(self, occ2):
         '''
@@ -100,12 +107,11 @@ class Candidat:
     canot inherit from the occurrence class, because is composed by multiple occurrences, in a "standart form"
     '''
 
-    def __init__(self, idi = 0, where = set(), protected = False, long_shape = ''):
+    def __init__(self, idi = 0, where = set(), protected = False):
         self.id = idi
         self.where = where #set of tuple of occurrences positions. ex: ((15,16,17), (119,120,121), (185,186,187)) for long cands like expression
         self.protected = protected # Protected if it is a propernoun: a place, a person... (begin with a uppercase)
-        self.long_shape = long_shape # Normalized shape
-
+        # self.long_shape = long_shape # Normalized shape
 
     def nuc_window(self, OCC):#OCC is dict_occ_ref
         '''
@@ -116,7 +122,6 @@ class Candidat:
             value: (cand_id, link_word_type)
                 #tuple are made of 2 things - caracterizing the occurrence
         '''
-        #TODO travailler sur les différences entre linkword (ex: de la VS de...?)
         found = {}
 
         for positions in self.where:#position is a tuple of occurrence positions for the cand. ex: ((15,16,17), (118,119,120,121), (185,186,187))
@@ -146,8 +151,10 @@ class Candidat:
             # reversing the direction
             i = 0
             done = False
-            while not done
+            while not done:
                 i += 1
+                if cand_posmin-i<1:#avoid an infinite loop backward
+                    break
                 if OCC[cand_posmin-i].cand: # more robust if first: no cand (ex t_word) will match even if t_word is still True...
                     break#faster than done=True
                 elif OCC[cand_posmin-i].linkword:
@@ -219,17 +226,13 @@ class Candidat:
                     tword_inside_count += 1
         return exprewhere, exprewhat
 
-
     def _unlink(self, occurrences):#to remove the pointed occurrences in the where att of the cand
         self.where.remove(occurrences)
 
-    def recession(self, recession_threshold, OCC):
-        if len(self.where) < recession_threshold and not self.name:
-            for occurrences in self.where:#to retrieve all the occ
-                for position in occurrences:
-                    OCC[position].recession()#remove the actual link to a cand in occ instance and replace it by the previous one
-            return True#to destry the entry in the diict CAND from outside
-
+    def recession(self, recession_threshold, OCC, CAND):
+        if len(self.where) < recession_threshold and not self.protected:
+            [OCC[position].recession(CAND) for occurrences in self.where for position in occurrences]#remove the actual link to a cand in occ instance and replace it by the previous one
+            return True#to destry the entry in the dict CAND from outside
 
     def build(self, OCC, CAND):
         for cand_pos in self.where:#expre_pos is a candcand range of position
@@ -244,17 +247,9 @@ class Nucleus(Candidat):
     ex: couleurs de FLEUR, couleur de MUR, colleur de CARTON (c'est un exemple problematique)
     -> captera couleur.
     '''
-    #TODO
-    # inclusion ou non de t_word dans les fenetres de nucleus? then not expa inside nucleus !hard!
-
 
     def __init__(self, **kwargs):
         super(Nucleus, self).__init__(**kwargs)
-        # FYI
-        # self.id = idi
-        # self.where = where #set of tuple of occurrences positions. ex: ((15,16,17), (119,120,121), (185,186,187)) for long cands like expression
-        # self.name = name # is it a propernoun: a place, a personn... (begin with a uppercase)
-        # self.long_shape = long_shape
 
     def _search_all_twords(self, OCC):
         for occur in OCC:
@@ -263,7 +258,6 @@ class Nucleus(Candidat):
                 if occur not in self.where and occur.soft_equality(where):
                     self.where.add((occur,))#add the position (as a tuple of 1 integer) of the occurrence in soft equality
                     break
-
 
     def buildnuc(self, OCC):
         self._search_all_twords(OCC)#search for all the occurrences of this nex nucleus in the whole text
