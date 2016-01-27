@@ -21,7 +21,7 @@ nucleus_threshold = (2,2,3,3)
             # s4: different linkword, different CAND
 expansion_threshold = 2
 expression_threshold = 2
-
+recession_threshold = min(expansion_threshold, expression_threshold, min(nucleus_threshold))
 
 os.chdir(working_directory)
 useful.setupfolder(working_directory)
@@ -32,10 +32,16 @@ logging.info('Started at' + starting)
 
 logging.info('### building the OCC dict ###')
 OCC, CAND = useful.build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_path, working_directory)
-logging.info('### nucleus step ###')
-extract.nucleus_step(OCC, CAND, nucleus_threshold)
-logging.info('### expansion and expression step ###')
-extract.exp_step(OCC, CAND, expression_threshold, expansion_threshold)
+
+for i in range(5):
+    logging.info('### EXPANSION & EXPRESSION ### step '+ str(i))
+    extract.exp_step(OCC, CAND, expression_threshold, expansion_threshold)
+    logging.info('### NUCLEUS ### step '+ str(i))
+    extract.nucleus_step(OCC, CAND, nucleus_threshold)
+    logging.info('### RECESSION ### step '+ str(i))
+    extract.recession_step(OCC, CAND, recession_threshold)
 
 ending = str(time.clock())
 logging.info('Ended at' + ending)
+
+# print(OCC[13945].long_shape)

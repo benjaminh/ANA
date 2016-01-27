@@ -52,15 +52,16 @@ class Occurrence:
         if self.cand in CAND:# if the 'retored' cand still exists
             CAND[self.cand].where.add(self.cand_pos)
         else:#another recession...#TODO: think if there is a way to stop loop, in case of three cand branches recessing toghether to same root cand
-            self._recession(self, CAND)
+            self._recession(CAND)
 
     def _recession(self, CAND):
         if len(self.hist)>1:
             self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
         else:# retrieve the initial state of the occ (not a CAND )
+            print(self.cand)
             self.cand = False
             self.cand_pos = set()
-            state = hist.pop()
+            state = self.hist.pop()
             if type(state)==bool:# it is a tword
                 self.tword = True
             elif type(state)==int:# it is a linkword
@@ -115,7 +116,7 @@ class Candidat:
         self.id = idi
         self.where = where #set of tuple of occurrences positions. ex: ((15,16,17), (119,120,121), (185,186,187)) for long cands like expression
         self.protected = protected # Protected if it is a propernoun: a place, a person... (begin with a uppercase)
-        logging.info('Cand created n°'+ str(self.id) + ' there: ' + str(self.where))
+        logging.info('Cand '+ str(self.id) + ' created there: ' + str(self.where))
         # self.long_shape = long_shape # Normalized shape
 
     def nuc_window(self, OCC):#OCC is dict_occ_ref
@@ -244,11 +245,12 @@ class Candidat:
         return expre_where, expre_what
 
     def _unlink(self, occurrences):#to remove the pointed occurrences in the where att of the cand
+        logging.info('Cand '+ str(self.id) + ' unlinked there: ' + str(occurrences))
         self.where.discard(occurrences)
 
     def recession(self, recession_threshold, OCC, CAND):
         if len(self.where) < recession_threshold and not self.protected:
-            [OCC[position].recession(CAND) for occurrences in self.where for position in occurrences]#remove the actual link to a cand in occ instance and replace it by the previous one
+            [OCC[position]._recession(CAND) for occurrences in self.where for position in occurrences]#remove the actual link to a cand in occ instance and replace it by the previous one
             return True#to destry the entry in the dict CAND from outside
 
     def build(self, OCC, CAND):
@@ -270,11 +272,12 @@ class Nucleus(Candidat):
 
     def _search_all_twords(self, OCC):
         for occur in OCC:
-            #TODO evaluate if this is too slow and not a good benefit for word spoting
-            for where in self.where:#try to match any of the shapes that allready matched
-                if occur not in self.where and OCC[occur].soft_equality(OCC[where[0]]):# where is a tuple of a single integer eg: (45,)
-                    self.where.add((occur,))#add the position (as a tuple of 1 integer) of the occurrence in soft equality
-                    break
+            if OCC[occur].tword:
+                #TODO evaluate if this is too slow and not a good benefit for word spoting
+                for where in self.where:#try to match any of the shapes that allready matched
+                    if occur not in self.where and OCC[occur].soft_equality(OCC[where[0]]):# where is a tuple of a single integer eg: (45,)
+                        self.where.add((occur,))#add the position (as a tuple of 1 integer) of the occurrence in soft equality
+                        break
 
     def buildnuc(self, OCC, CAND):
         self._search_all_twords(OCC)#search for all the occurrences of this nex nucleus in the whole text

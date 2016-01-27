@@ -13,10 +13,10 @@ def nucleus_step(OCC, CAND, nucleus_threshold):
     #nucleus_threshold should be tuple formated like "vector" (see above)
     twords_dict = {}
     for cand in CAND:
-        window = CAND[cand].nuc_window(OCC)# key:t_word_pos; value: (cand_id, link_word_type)
+        window = CAND[cand].nuc_window(OCC)# key:t_word_pos; value: (link_word_type, cand_id)
         twords_dict.update(window)
     twordsmerged = useful.merge_egal_sple_dict(OCC,twords_dict)
-    #twordsmerged {key: tuple of (twords_position); value: list of tuples(cand_id, link_word_type)}
+    #twordsmerged {key: tuple of (twords_position); value: list of tuples(link_word_type, cand_id)}
     for case in twordsmerged:
         if len(twordsmerged[case]) > min(nucleus_threshold):
             vector = useful.count_nuc_cases(twordsmerged[case])
@@ -81,6 +81,9 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
 ##########################
 
 def recession_step(OCC, CAND, recession_threshold):
+    todel = set()
     for idi in CAND:
         if CAND[idi].recession(recession_threshold, OCC, CAND):#None == false
-            del CAND[idi]
+            todel.add(idi)
+    for idi in todel:
+        del CAND[idi]

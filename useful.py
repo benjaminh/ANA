@@ -52,7 +52,7 @@ def merge_egal_sple_dict(OCC, *dict_args):
         # 1 degree only! should be enough
         z = {}
         seen = set()
-        for key in equal:#equal[occ_pos] = set of occ_pos
+        for key in sorted(equal, key=lambda k: len(equal[k]), reverse = True):#equal[occ_pos] = set of occ_pos
             if key not in seen:
                 seen.update(equal[key])
                 z[key] = equal[key]#copy of the equal[key] entry
@@ -66,7 +66,7 @@ def merge_egal_sple_dict(OCC, *dict_args):
         return final
 
 
-def count_nuc_cases(value_eq):# merged = list of tuples(cand_id, link_word_type) for equivalent twords
+def count_nuc_cases(value_eq):# merged = list of tuples(link_word_type, cand_id) for equivalent twords
 #{merged[tuple of (occurrence_position)]: list of tuples(cand_id, link_word_type)}
 # Four Cases!
     s1 = 0# s1: same linkword same CAND
@@ -75,11 +75,11 @@ def count_nuc_cases(value_eq):# merged = list of tuples(cand_id, link_word_type)
     s4 = 0# s4: different linkword, different CAND
     seen = set()
     for i, feature in enumerate(value_eq):#feature is tuple(cand_id, link_word_type)
-        cand_id, link_word_type = feature
+        link_word_type, cand_id = feature
         seen.add(i)
         for i2, feature2 in enumerate(value_eq):
             if i2 not in seen:
-                cand_id2, link_word_type2 = feature2
+                link_word_type2, cand_id2 = feature2
                 if cand_id2 != cand_id and link_word_type2 == link_word_type:
                     s2 += 1
                 elif cand_id2 == cand_id and link_word_type2 == link_word_type:
@@ -140,6 +140,7 @@ def build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_
             words = Rwordsinline.findall(line)
             for word in words:
                 index += 1
+                matchbootstrap = False
                 if Rsplitermark.match(word):
                     #TODO page_id = get the id of the splitmarker, or build it
                     if page_id:#the first markers of the page will have no "last used page_id"
@@ -164,15 +165,16 @@ def build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_
                     for indice in bootstrap:#bootstrap is a dict Occurrences objects
                         if OCC[index].soft_equality(bootstrap[indice]):
                             occ2boot.setdefault(indice, set()).add(tuple([index]))
+                            matchbootstrap = True#not be in conflict with the propernouns below
                             continue
-                    if dotahead == False and word[0].isupper() and words.index(word) != 0:#no dot before and uppercase and not begining of a newline -> it is a propernoun
+                    if dotahead == False and word[0].isupper() and words.index(word) != 0 and matchbootstrap == False:#no dot before and uppercase and not begining of a newline -> it is a propernoun
                         propernouns.setdefault(word, set()).add(tuple([index]))
         pages_pos[page_id] += (index,)#closing the last page
         for indice in occ2boot:# building the cand from the all the occ matching with bootstrap words
             try:
                 next_id = max(CAND)+1
             except ValueError:#this means it is the first cand, there is no value for max
-                next_id = 0
+                next_id = 1
             CAND[next_id] = objects.Candidat(idi = next_id, where = occ2boot[indice])
             CAND[next_id].build(OCC, CAND)
         for propernoun in propernouns:
