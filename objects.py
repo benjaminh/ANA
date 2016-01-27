@@ -142,34 +142,40 @@ class Candidat:
             i = 0
             while not done:
                 i += 1
-                if OCC[cand_posmax+i].cand: #need to be first: stop the while loop, also no cand (ex t_word) will match even if t_word is still True...
-                    break#faster than done=True
-                elif OCC[cand_posmax+i].linkword:
-                    linkword = OCC[cand_posmax+i].linkword # get the id of the linkword
-                elif OCC[cand_posmax+i].tword:
-                    if not linkword:
+                try:
+                    if OCC[cand_posmax+i].cand: #need to be first: stop the while loop, also no cand (ex t_word) will match even if t_word is still True...
                         break#faster than done=True
-                    else:
-                        found[cand_posmax+i] = (linkword, self.id)# get the position of the t_word
-                        done = True
+                    elif OCC[cand_posmax+i].linkword:
+                        linkword = OCC[cand_posmax+i].linkword # get the id of the linkword
+                    elif OCC[cand_posmax+i].tword:
+                        if not linkword:
+                            break#faster than done=True
+                        else:
+                            found[cand_posmax+i] = (linkword, self.id)# get the position of the t_word
+                            done = True
+                except KeyError:# means that the loop reached the end of the text
+                    break
 
             # reversing the direction
             i = 0
             done = False
             while not done:
                 i += 1
-                if cand_posmin-i<1:#avoid an infinite loop backward
-                    break
-                if OCC[cand_posmin-i].cand: # more robust if first: no cand (ex t_word) will match even if t_word is still True...
-                    break#faster than done=True
-                elif OCC[cand_posmin-i].linkword:
-                    linkword_reverse = OCC[cand_posmin-i].linkword # get the id of the linkword
-                elif OCC[cand_posmin-i].tword:
-                    if not linkword_reverse:
+                try:
+                    if cand_posmin-i<1:#avoid an infinite loop backward
+                        break
+                    if OCC[cand_posmin-i].cand: # more robust if first: no cand (ex t_word) will match even if t_word is still True...
                         break#faster than done=True
-                    else:
-                        found[cand_posmin-i] = (linkword_reverse, self.id)# get the position of the t_word
-                        done = True
+                    elif OCC[cand_posmin-i].linkword:
+                        linkword_reverse = OCC[cand_posmin-i].linkword # get the id of the linkword
+                    elif OCC[cand_posmin-i].tword:
+                        if not linkword_reverse:
+                            break#faster than done=True
+                        else:
+                            found[cand_posmin-i] = (linkword_reverse, self.id)# get the position of the t_word
+                            done = True
+                except KeyError:# means that the loop reached the end of the text
+                    break
         return found
 
 
@@ -189,13 +195,16 @@ class Candidat:
             i = 0
             while not done:
                 i += 1
-                if OCC[cand_posmax+i].cand: #need to be first: stop the while loop, also no cand (ex t_word) will match even if t_word is still True...
-                    break#faster than done=True
-                elif OCC[cand_posmax+i].linkword: #stops the while loop. if there is a linkword this shape is more likely to be a nucleus
-                    break#faster than done=True
-                elif OCC[cand_posmax+i].tword:
-                    found[cand_posmax+i] = positions
-                    done = True
+                try:
+                    if OCC[cand_posmax+i].cand: #need to be first: stop the while loop, also no cand (ex t_word) will match even if t_word is still True...
+                        break#faster than done=True
+                    elif OCC[cand_posmax+i].linkword: #stops the while loop. if there is a linkword this shape is more likely to be a nucleus
+                        break#faster than done=True
+                    elif OCC[cand_posmax+i].tword:
+                        found[cand_posmax+i] = positions
+                        done = True
+                except KeyError:# means that the loop reached the end of the text
+                    break
         return found
 
 
@@ -205,7 +214,7 @@ class Candidat:
         for expression search based on all the cands,
         returns 2 dicts:
             # expre_where{tuple(cand_id, nextcand_id): set of tuples(cand_positions)}
-            # expre_what{tuple(cand_positions): set of tuple(occ_pos of the ptential expre)}
+            # expre_what{tuple(cand_positions): set of tuple(occ_pos of the potential expre)}
         '''
 
         expre_where = {}
@@ -219,20 +228,23 @@ class Candidat:
             linkword = False
             while tword_inside_count<2:
                 i += 1
-                if OCC[cand_posmax+i].linkword:
-                    linkword = True#FIXME why is it usefull to check for linkword??
-                elif OCC[cand_posmax+i].cand and linkword == True:
-                    couple = (self.id, OCC[cand_posmax+i].cand)# tuple(cand_id, nextcand_id)
-                    expre_pos = tuple(range(cand_posmin, max(OCC[cand_posmax+i].cand_pos)))# match till the the end tail of the next_cand
-                    expre_where.setdefault(couple, set()).add(positions)
-                    expre_what[positions] = expre_pos
+                try:
+                    if OCC[cand_posmax+i].linkword:
+                        linkword = True#FIXME why is it usefull to check for linkword??
+                    elif OCC[cand_posmax+i].cand and linkword == True:
+                        couple = (self.id, OCC[cand_posmax+i].cand)# tuple(cand_id, nextcand_id)
+                        expre_pos = tuple(range(cand_posmin, max(OCC[cand_posmax+i].cand_pos)+1))# match till the the end tail of the next_cand; ()+1 is for the range behaviour)
+                        expre_where.setdefault(couple, set()).add(positions)
+                        expre_what[positions] = expre_pos
+                        break
+                    elif OCC[cand_posmax+i].tword:
+                        tword_inside_count += 1
+                except KeyError:# means that the loop reached the end of the text
                     break
-                elif OCC[cand_posmax+i].tword:
-                    tword_inside_count += 1
-        return exprewhere, exprewhat
+        return expre_where, expre_what
 
     def _unlink(self, occurrences):#to remove the pointed occurrences in the where att of the cand
-        self.where.remove(occurrences)
+        self.where.discard(occurrences)
 
     def recession(self, recession_threshold, OCC, CAND):
         if len(self.where) < recession_threshold and not self.protected:
@@ -260,10 +272,10 @@ class Nucleus(Candidat):
         for occur in OCC:
             #TODO evaluate if this is too slow and not a good benefit for word spoting
             for where in self.where:#try to match any of the shapes that allready matched
-                if occur not in self.where and occur.soft_equality(where):
+                if occur not in self.where and OCC[occur].soft_equality(OCC[where[0]]):# where is a tuple of a single integer eg: (45,)
                     self.where.add((occur,))#add the position (as a tuple of 1 integer) of the occurrence in soft equality
                     break
 
-    def buildnuc(self, OCC):
+    def buildnuc(self, OCC, CAND):
         self._search_all_twords(OCC)#search for all the occurrences of this nex nucleus in the whole text
-        self.build(OCC)#transform the twords in nucleus
+        self.build(OCC, CAND)#transform the twords in nucleus

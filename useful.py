@@ -29,14 +29,18 @@ def merge_egal_sple_dict(OCC, *dict_args):
     Given any number of dicts, shallow copy and merge into a new dict,
     based on egal_sple fonction.
     '''
+    final = {}
     if len(dict_args) > 1:
         merged = merge_dicts(dict_args)
     else:
         merged = dict_args[0]
 
     if len(merged) == 1: # faster if there is only one pair of (key, value) in the dict!
-        return merged
+        key, value = merged.popitem()
+        final[(key,)] = [value]
+        return final
     else:
+        equal = {}
         for key1 in merged:
             equal[key1] = set([key1])
             # equal_keys = (key1,)
@@ -47,14 +51,14 @@ def merge_egal_sple_dict(OCC, *dict_args):
         # now: FOAF style "les amis de mes amis sont mes amis..."
         # 1 degree only! should be enough
         z = {}
-        seen = {}
+        seen = set()
         for key in equal:#equal[occ_pos] = set of occ_pos
             if key not in seen:
-                seen.add(equal[key])
-                z[key].add(equal[key])#copy of the equal[key] entry
+                seen.update(equal[key])
+                z[key] = equal[key]#copy of the equal[key] entry
                 for key_eq in equal[key]:
-                    z[key].add(equal[key_eq])# add all the foaf without duplication (in a set)
-                    seen.add(equal[key_eq])# only one degree so we can don't want to rebuild the whole dict of relations.
+                    z[key].update(equal[key_eq])# add all the foaf without duplication (in a set)
+                    seen.update(equal[key_eq])# only one degree so we can don't want to rebuild the whole dict of relations.
         # now lets build the dict[equal_keys] = equal_values
         for key, key_eqs in z.items():
             for key_eq in key_eqs:
@@ -62,44 +66,29 @@ def merge_egal_sple_dict(OCC, *dict_args):
         return final
 
 
-def count_nuc_cases(merged):
+def count_nuc_cases(value_eq):# merged = list of tuples(cand_id, link_word_type) for equivalent twords
 #{merged[tuple of (occurrence_position)]: list of tuples(cand_id, link_word_type)}
 # Four Cases!
     s1 = 0# s1: same linkword same CAND
     s2 = 0# s2: same linkword, different CAND
     s3 = 0# s3: different linkword, same CAND
     s4 = 0# s4: different linkword, different CAND
-    for key_eq, value_eq in merged.items():#value_eq
-        for feature, i in enumerate(value_eq):#feature is tuple(cand_id, link_word_type)
-            cand_id, link_word_type = feature
-            seen.add(i)
-            for feature2, i2 in enumerate(value_eq):
-                if i2 not in seen:
-                    cand_id2, link_word_type2 = feature2
-                    if cand_id2 != cand_id and link_word_type2 == link_word_type:
-                        s2 += 1
-                    elif cand_id2 == cand_id and link_word_type2 == link_word_type:
-                        s1 += 1
-                    elif cand_id2 == cand_id and link_word_type2 != link_word_type:
-                        s3 += 1
-                    elif cand_id2 != cand_id and link_word_type2 != link_word_type:
-                        s4 += 1
+    seen = set()
+    for i, feature in enumerate(value_eq):#feature is tuple(cand_id, link_word_type)
+        cand_id, link_word_type = feature
+        seen.add(i)
+        for i2, feature2 in enumerate(value_eq):
+            if i2 not in seen:
+                cand_id2, link_word_type2 = feature2
+                if cand_id2 != cand_id and link_word_type2 == link_word_type:
+                    s2 += 1
+                elif cand_id2 == cand_id and link_word_type2 == link_word_type:
+                    s1 += 1
+                elif cand_id2 == cand_id and link_word_type2 != link_word_type:
+                    s3 += 1
+                elif cand_id2 != cand_id and link_word_type2 != link_word_type:
+                    s4 += 1
     return (s1, s2, s3, s4)
-
-
-# def soft_equality_set(occ_pos_set, OCC, threshold):
-#     #should be a set of occ_pos
-#     #returns a set of tuple containing equals pos if there is more than "threshold" equalities
-#     seen= set()
-#     equals = set()
-#     for pos in occ_pos_set:
-#         seen.add(pos)
-#         eq = (pos,)
-#         for pos2 in occ_pos_set:
-#             if OCC[pos].soft_equality(pos2) and pos2 not in seen:
-#                 eq += (pos2,)
-#         if len(eq) >= threshold:
-#             equals.add(eq)
 
 def build_bootdict(bootstrap_file_path):
     with open(bootstrap_file_path, 'r', encoding='utf8') as bootstrapfile:
@@ -127,11 +116,6 @@ def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1,
                 linkwords[linkword] = i
         return linkwords
 
-# #ecrire log
-# def write_log(working_directory, indication):
-#     log_file_path = os.path.join(working_directory, 'log', 'ana.log')
-#     with open(log_file_path, 'a', encoding = 'utf8') as logfile:
-#         logfile.write(indication + '\n')
 
 #jsonpagespos_path is to store the position of the markers spliting the original pages in the concatenated txt4ana.txt
 def build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_path, working_directory):
@@ -162,6 +146,7 @@ def build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_
                         pages_pos[page_id] += (index,)#last used page_id is still valid and close the last
                     page_id = re.findall(r'([\_|\d]+)', word)[0]#get the new page id
                     pages_pos[page_id] = (index+1,)#begining of the next page
+                    index -= 1#otherwise it builds an empty OCC key
                 elif word in linkwords:
                     OCC[index] = objects.Occurrence(long_shape = word, linkword = linkwords[word])
                     dotahead = False
