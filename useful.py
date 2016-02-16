@@ -5,6 +5,7 @@ import logging
 import re
 import objects
 import json
+import copy
 
 def setupfolder(working_directory):
     if not os.path.exists('output/'):
@@ -55,7 +56,7 @@ def merge_egal_sple_dict(OCC, *dict_args):
         for key in sorted(equal, key=lambda k: len(equal[k]), reverse = True):#equal[occ_pos] = set of occ_pos
             if key not in seen:
                 seen.update(equal[key])
-                z[key] = equal[key]#copy of the equal[key] entry
+                z[key] = copy.copy(equal[key])#copy of the equal[key] entry
                 for key_eq in equal[key]:
                     z[key].update(equal[key_eq])# add all the foaf without duplication (in a set)
                     seen.update(equal[key_eq])# only one degree so we can don't want to rebuild the whole dict of relations.
@@ -113,7 +114,7 @@ def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1,
             line = re.sub('\s+$', '', line)
             line = re.split('\W+', line)
             for linkword in line:
-                linkwords[linkword] = i
+                linkwords[linkword] = i+1# to avoid having the first line considered as 0 index; Actualy 0 is for non-linkwords
         return linkwords
 
 
@@ -167,8 +168,8 @@ def build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_
                             occ2boot.setdefault(indice, set()).add(tuple([index]))
                             matchbootstrap = True#not be in conflict with the propernouns below
                             continue
-                    if dotahead == False and word[0].isupper() and words.index(word) != 0 and matchbootstrap == False:#no dot before and uppercase and not begining of a newline -> it is a propernoun
-                        propernouns.setdefault(word, set()).add(tuple([index]))
+                    # if dotahead == False and word[0].isupper() and words.index(word) != 0 and matchbootstrap == False:#no dot before and uppercase and not begining of a newline -> it is a propernoun
+                    #     propernouns.setdefault(word, set()).add(tuple([index]))
         pages_pos[page_id] += (index,)#closing the last page
         for indice in occ2boot:# building the cand from the all the occ matching with bootstrap words
             try:

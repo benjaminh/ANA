@@ -28,25 +28,32 @@ class Occurrence:
         self.hist = []# the old references to the past cand states
         self.set_shapes()# build the shapes of the occ
 
-    def set_cand(self, cand_id, cand_pos, CAND):
-        self._unlink(CAND)
+    def set_cand(self, cand_id, cand_pos):
+        old_cand = self._unlink()
         self.cand = cand_id# point to a new cand id
         self.cand_pos = cand_pos# get the new whole cand position it is part of
+        return old_cand# is a tuple (old_cand_id, old_cand_pos)
 
-    def _unlink(self, CAND):
+    def _unlink(self):
+        '''
+        this function discard the tuple of occ_pos stored in the cand.where
+        but  it does this for eac
+        '''
         if self.cand:
             #TODO: old_pos trie plusieurs fois la même chose, (pour chaq occurrence lié au cand) -> pas très efficace
             old_pos = tuple(sorted(self.cand_pos))# need to copy in a (immutable) tuple to store that state (set are mutable)
             #"sorted to match the normal sorted form"
-            CAND[self.cand]._unlink(old_pos)
             old_cand = (self.cand, old_pos)
             self.hist.append(old_cand)# save the old reference to the cand
+            return old_cand
         elif self.linkword:# a cand is not anymore a linkword nor anything
             self.hist.append(self.linkword)
             self.linkword = False
         elif self.tword:# a cand is not anymore a tword nor anything
             self.hist.append(self.tword)
             self.tword = False
+        else:#is an empty_word
+            self.hist.append('n')
 
     def _relink(self, CAND):
         if self.cand in CAND:# if the 'retored' cand still exists
@@ -56,9 +63,11 @@ class Occurrence:
 
     def _recession(self, CAND):
         if len(self.hist)>1:
+            print('UNDERTHR',self.cand)
+            print('HIST', self.hist)
+            print('SHAPE', self.long_shape)
             self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
         else:# retrieve the initial state of the occ (not a CAND )
-            print(self.cand)
             self.cand = False
             self.cand_pos = set()
             state = self.hist.pop()
@@ -66,7 +75,7 @@ class Occurrence:
                 self.tword = True
             elif type(state)==int:# it is a linkword
                 self.linkword = state
-            else:# it was a cand from the bootstrap
+            elif state != 'n':# it is not an emptyword, it was a cand from the bootstrap
                 self.cand, self.cand_pos = state
         if self.cand:
             self._relink(CAND)
@@ -245,19 +254,31 @@ class Candidat:
         return expre_where, expre_what
 
     def _unlink(self, occurrences):#to remove the pointed occurrences in the where att of the cand
-        logging.info('Cand '+ str(self.id) + ' unlinked there: ' + str(occurrences))
+        #logging.info('Cand '+ str(self.id) + ' unlinked there: ' + str(occurrences))
         self.where.discard(occurrences)
 
     def recession(self, recession_threshold, OCC, CAND):
         if len(self.where) < recession_threshold and not self.protected:
+            print('UNDER THR', self.id)
             [OCC[position]._recession(CAND) for occurrences in self.where for position in occurrences]#remove the actual link to a cand in occ instance and replace it by the previous one
             return True#to destry the entry in the dict CAND from outside
 
+    def destroy(self, cand_pos_to_discard, CAND):#cand_pos_to_discard is a dict{cand_id: set of tuple of occ_pos to be unlinked}
+        for old_cand_id in cand_pos_to_discard:
+            for old_cand_pos in cand_pos_to_discard[old_cand_id]:
+                CAND[old_cand_id]._unlink(old_cand_pos)
+
+
     def build(self, OCC, CAND):
-        for cand_pos in self.where:#expre_pos is a candcand range of position
+        cand_pos_to_discard = {}
+        for cand_pos in self.where:#self.where is set of tuple of occurrences positions. ex: ((15,16,17), (119,120,121), (185,186,187)) for long cands
             new_pos = set(cand_pos)
             for occ_pos in cand_pos:
-                OCC[occ_pos].set_cand(self.id, new_pos, CAND)
+                old_cand = OCC[occ_pos].set_cand(self.id, new_pos)#get the position of the cand on theses occ (if any cand existed there)
+                if old_cand:#in case of a nucleus no cand is to be discarded because is only a twords (does not imply cand growth), so oldcandid is None
+                    old_cand_id, old_cand_pos = old_cand
+                    cand_pos_to_discard.setdefault(old_cand_id, set()).add(old_cand_pos)
+        self.destroy(cand_pos_to_discard, CAND)
 
 
 class Nucleus(Candidat):
