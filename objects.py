@@ -15,13 +15,14 @@ rm_accent = {'é':'e', 'è':'e', 'ê':'e', 'ë':'e', 'ù':'u', 'û':'u', 'ü':'u
 SEUIL_EGAL_SPLE = 7
 
 class Occurrence:
-    def __init__(self, long_shape, cand = 0, cand_pos = set(), date = False, linkword = 0, tword = False):
+    def __init__(self, long_shape, cand = 0, cand_pos = set(), date = False, linkword = 0, tword = False, stopword = False):
         self.short_shape = ''#only to compare words
         self.long_shape = long_shape#keeping the long in a original utf8 format
         self.ascii_shape = ''# the long shape without accent and cédille
         self.cand = cand# an eventual reference to a cand_id
         self.cand_pos = cand_pos# set of neighbours that are part of the same cand
         self.date = date# is it a date?
+        self.stopword = stopword# this pattern stops the construction of candidat ex: (. , : ! ...)
         # self.stopword = False #is it a stop word? USELESS
         self.linkword = linkword# or value by the line number in the schema file: [1:de, 2:du, 3:des, 4:d, 5:au, 6:aux, 7:en]
         self.tword = tword# is a normal_word?
@@ -63,9 +64,6 @@ class Occurrence:
 
     def _recession(self, CAND):
         if len(self.hist)>1:
-            print('UNDERTHR',self.cand)
-            print('HIST', self.hist)
-            print('SHAPE', self.long_shape)
             self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
         else:# retrieve the initial state of the occ (not a CAND )
             self.cand = False
@@ -153,7 +151,7 @@ class Candidat:
             while not done:
                 i += 1
                 try:
-                    if OCC[cand_posmax+i].cand: #need to be first: stop the while loop, also no cand (ex t_word) will match even if t_word is still True...
+                    if OCC[cand_posmax+i].cand or OCC[cand_posmax+i].stopword: #need to be first: stop the while loop
                         break#faster than done=True
                     elif OCC[cand_posmax+i].linkword:
                         linkword = OCC[cand_posmax+i].linkword # get the id of the linkword
@@ -174,7 +172,7 @@ class Candidat:
                 try:
                     if cand_posmin-i<1:#avoid an infinite loop backward
                         break
-                    if OCC[cand_posmin-i].cand: # more robust if first: no cand (ex t_word) will match even if t_word is still True...
+                    if OCC[cand_posmin-i].cand or OCC[cand_posmin-i].stopword:
                         break#faster than done=True
                     elif OCC[cand_posmin-i].linkword:
                         linkword_reverse = OCC[cand_posmin-i].linkword # get the id of the linkword
@@ -206,9 +204,9 @@ class Candidat:
             while not done:
                 i += 1
                 try:
-                    if OCC[cand_posmax+i].cand: #need to be first: stop the while loop, also no cand (ex t_word) will match even if t_word is still True...
+                    if OCC[cand_posmax+i].cand or OCC[cand_posmax+i].stopword:
                         break#faster than done=True
-                    elif OCC[cand_posmax+i].linkword: #stops the while loop. if there is a linkword this shape is more likely to be a nucleus
+                    elif OCC[cand_posmax+i].linkword:#stops the while loop. if there is a linkword this shape is more likely to be a nucleus
                         break#faster than done=True
                     elif OCC[cand_posmax+i].tword:
                         found[cand_posmax+i] = positions
@@ -239,9 +237,11 @@ class Candidat:
             while tword_inside_count<2:
                 i += 1
                 try:
-                    if OCC[cand_posmax+i].linkword:
-                        linkword = True#FIXME why is it usefull to check for linkword??
-                    elif OCC[cand_posmax+i].cand and linkword == True:
+                    if OCC[cand_posmax+i].stopword:
+                        break
+                    # if OCC[cand_posmax+i].linkword:
+                    #     linkword = True# FIXME why is it usefull to check for linkword??
+                    elif OCC[cand_posmax+i].cand:# and linkword == True:
                         couple = (self.id, OCC[cand_posmax+i].cand)# tuple(cand_id, nextcand_id)
                         expre_pos = tuple(range(cand_posmin, max(OCC[cand_posmax+i].cand_pos)+1))# match till the the end tail of the next_cand; ()+1 is for the range behaviour)
                         expre_where.setdefault(couple, set()).add(positions)
@@ -259,7 +259,6 @@ class Candidat:
 
     def recession(self, recession_threshold, OCC, CAND):
         if len(self.where) < recession_threshold and not self.protected:
-            print('UNDER THR', self.id)
             [OCC[position]._recession(CAND) for occurrences in self.where for position in occurrences]#remove the actual link to a cand in occ instance and replace it by the previous one
             return True#to destry the entry in the dict CAND from outside
 

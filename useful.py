@@ -101,9 +101,9 @@ def build_bootdict(bootstrap_file_path):
                 bootstrap[i] = objects.Occurrence(long_shape = cand, cand = 0, cand_pos = set(), date = False, linkword = 0, tword = True)
         return bootstrap
 
-def build_stopset(stopword_file_path):
-    with open(stopword_file_path, 'r', encoding='utf8') as stopwordfile:
-        lines = stopwordfile.readlines()
+def build_wordset(wordlist_file_path):
+    with open(wordlist_file_path, 'r', encoding='utf8') as wordlistfile:
+        lines = wordlistfile.readlines()
         return set([re.sub(r'\n', '', s) for s in lines])
 
 def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1, d:1, au:2, aux:2, en:3}
@@ -119,11 +119,12 @@ def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1,
 
 
 #jsonpagespos_path is to store the position of the markers spliting the original pages in the concatenated txt4ana.txt
-def build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_path, working_directory):
+def build_OCC(txt4ana, stopwords_file_path, emptywords_file_path, linkwords_file_path, bootstrap_file_path, working_directory):
     bootstrap = build_bootdict(bootstrap_file_path)
     occ2boot = {}
     propernouns = {}
-    stopwords = build_stopset(stopwords_file_path)
+    emptywords = build_wordset(emptywords_file_path)
+    stopwords = build_wordset(stopwords_file_path)
     linkwords = build_linkdict(linkwords_file_path)
     Rsplitermark = re.compile(r'wxcv[\d|_]*wxcv')#TODO build a splitermark regex
     Rwordsinline = re.compile(r'(\w+[’|\']?|[.,!?;])(?siu)')
@@ -152,13 +153,14 @@ def build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_
                 elif word in linkwords:
                     OCC[index] = objects.Occurrence(long_shape = word, linkword = linkwords[word])
                     dotahead = False
-                elif re.match(r'\.', word):
-                    OCC[index] = objects.Occurrence(long_shape = word)
-                    dotahead = True
+                elif word in stopwords:
+                    OCC[index] = objects.Occurrence(long_shape = word, stopword = True)
+                    if re.match(r'\.|\?|\!', word):
+                        dotahead = True
                 elif Rdate.match(word):#IDEA is it interesting to have dates as tword?
                     OCC[index] = objects.Occurrence(long_shape = word, date = True, tword = True)
                     dotahead = False
-                elif word.lower() in stopwords or Rnumeral.match(word) or Rponctuation.match(word):
+                elif word.lower() in emptywords or Rnumeral.match(word) or Rponctuation.match(word):
                     OCC[index] = objects.Occurrence(long_shape = word)
                     dotahead = False
                 else:
@@ -168,8 +170,8 @@ def build_OCC(txt4ana, stopwords_file_path, linkwords_file_path, bootstrap_file_
                             occ2boot.setdefault(indice, set()).add(tuple([index]))
                             matchbootstrap = True#not be in conflict with the propernouns below
                             continue
-                    # if dotahead == False and word[0].isupper() and words.index(word) != 0 and matchbootstrap == False:#no dot before and uppercase and not begining of a newline -> it is a propernoun
-                    #     propernouns.setdefault(word, set()).add(tuple([index]))
+                    if dotahead == False and word[0].isupper() and words.index(word) != 0 and matchbootstrap == False:#no dot before and uppercase and not begining of a newline -> it is a propernoun
+                        propernouns.setdefault(word, set()).add(tuple([index]))
         pages_pos[page_id] += (index,)#closing the last page
         for indice in occ2boot:# building the cand from the all the occ matching with bootstrap words
             try:

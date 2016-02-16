@@ -83,7 +83,7 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
 def recession_step(OCC, CAND, recession_threshold):
     todel = set()
     for idi in CAND:
-        if CAND[idi].recession(recession_threshold, OCC, CAND):#None == false
+        if CAND[idi].recession(recession_threshold, OCC, CAND):
             todel.add(idi)
     for idi in todel:
         del CAND[idi]
