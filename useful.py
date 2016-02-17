@@ -175,7 +175,8 @@ def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptyword
                             continue
                     if dotahead == False and word[0].isupper() and words.index(word) != 0 and matchbootstrap == False:#no dot before and uppercase and not begining of a newline -> it is a propernoun
                         propernouns.setdefault(word, set()).add(tuple([index]))
-        pages_pos[page_id] += (index,)#closing the last page
+        if page_id:
+            pages_pos[page_id] += (index,)#closing the last page
         for indice in occ2boot:# building the cand from the all the occ matching with bootstrap words
             try:
                 next_id = max(CAND)+1
