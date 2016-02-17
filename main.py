@@ -10,18 +10,22 @@ import os
 working_directory = '/home/matthieu/ownCloud/projets/1_corpora/test2_4ana2'#directory where the txt4ana is
 txt4ana = '/home/matthieu/ownCloud/projets/1_corpora/test2_4ana2/text4ana.txt'
 bootstrap_file_path = '/home/matthieu/ownCloud/projets/1_corpora/test2_4ana2/bootstrap'
+extra_stopwords_file_path = '/home/matthieu/ownCloud/projets/1_corpora/test2_4ana2/extra_stopwords.txt'
+extra_emptywords_file_path = '/home/matthieu/ownCloud/projets/1_corpora/test2_4ana2/extra_emptywords.txt'
+
 
 stopwords_file_path = '/home/matthieu/Bureau/ANA/french/stopwords_fr.txt'
 linkwords_file_path = '/home/matthieu/Bureau/ANA/french/schema'
 emptywords_file_path = '/home/matthieu/Bureau/ANA/french/emptywords_fr.txt'
+
 nucleus_threshold = (2,2,3,3)
             #vector is tuple like this
             # s1: same linkword same CAND
             # s2: same linkword, different CAND
             # s3: different linkword, same CAND
             # s4: different linkword, different CAND
-expansion_threshold = 3
-expression_threshold = 3
+expansion_threshold = 2
+expression_threshold = 2
 recession_threshold = min(expansion_threshold, expression_threshold)
 
 os.chdir(working_directory)
@@ -34,7 +38,7 @@ logging.info('Started at' + starting)
 logging.info('### building the OCC dict ###')
 OCC, CAND = useful.build_OCC(txt4ana, stopwords_file_path, emptywords_file_path, linkwords_file_path, bootstrap_file_path, working_directory)
 
-for i in range(6):
+for i in range(10):
     for j in range(3):
         logging.info('### NUCLEUS ### step '+ str(i)+'.'+ str(j))
         extract.nucleus_step(OCC, CAND, nucleus_threshold)
@@ -53,6 +57,8 @@ for idi in CAND:
             shape += OCC[e].long_shape
             shape += ' '
         break
+    if shape == '':
+        print(idi)
     print(shape)
 
 # print('#########')

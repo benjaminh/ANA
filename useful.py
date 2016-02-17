@@ -143,7 +143,7 @@ def build_OCC(txt4ana, stopwords_file_path, emptywords_file_path, linkwords_file
             for word in words:
                 index += 1
                 matchbootstrap = False
-                if Rsplitermark.match(word):
+                elif Rsplitermark.match(word):
                     #TODO page_id = get the id of the splitmarker, or build it
                     if page_id:#the first markers of the page will have no "last used page_id"
                         pages_pos[page_id] += (index,)#last used page_id is still valid and close the last
@@ -181,15 +181,15 @@ def build_OCC(txt4ana, stopwords_file_path, emptywords_file_path, linkwords_file
             CAND[next_id] = objects.Candidat(idi = next_id, where = occ2boot[indice])
             CAND[next_id].build(OCC, CAND)
         for propernoun in propernouns:
-            next_id = max(CAND)+1
-            CAND[next_id] = objects.Candidat(idi = next_id, where = propernouns[propernoun], protected = True)
-            CAND[next_id].build(OCC, CAND)
+            if len(propernouns[propernoun])>1:
+                next_id = max(CAND)+1
+                CAND[next_id] = objects.Candidat(idi = next_id, where = propernouns[propernoun])
+                CAND[next_id].build(OCC, CAND)
         #writing a file mapping the concatenated file with their start_po end_pos in the OCC dict
         jsonpagespos_path = os.path.join(working_directory, 'intra', 'pages_pos.json')
         with open(jsonpagespos_path, 'w') as jsonpages:#TODO ok pour un JSON file? il fera le lien entre le mots clef et les noeuds neo4j?
             json.dump(pages_pos, jsonpages, ensure_ascii=False, indent=4)
     return OCC, CAND
-                #TODO build the cands protected
                 #FIXME how to build Atelier et Chantier if Atelier and Chantier are allready cands -> no linkword, nothing helps to build it!
                 #TODO build neo4j nods corresponding to the pages. (should have been done before, in preANA step)
 

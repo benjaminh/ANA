@@ -119,10 +119,9 @@ class Candidat:
     canot inherit from the occurrence class, because is composed by multiple occurrences, in a "standart form"
     '''
 
-    def __init__(self, idi = 0, where = set(), protected = False):
+    def __init__(self, idi = 0, where = set()):
         self.id = idi
         self.where = where #set of tuple of occurrences positions. ex: ((15,16,17), (119,120,121), (185,186,187)) for long cands like expression
-        self.protected = protected # Protected if it is a propernoun: a place, a person... (begin with a uppercase)
         logging.info('Cand '+ str(self.id) + ' created there: ' + str(self.where))
         # self.long_shape = long_shape # Normalized shape
 
@@ -258,15 +257,19 @@ class Candidat:
         self.where.discard(occurrences)
 
     def recession(self, recession_threshold, OCC, CAND):
-        if len(self.where) < recession_threshold and not self.protected:
+        if len(self.where) < recession_threshold:
             [OCC[position]._recession(CAND) for occurrences in self.where for position in occurrences]#remove the actual link to a cand in occ instance and replace it by the previous one
             return True#to destry the entry in the dict CAND from outside
 
-    def destroy(self, cand_pos_to_discard, CAND):#cand_pos_to_discard is a dict{cand_id: set of tuple of occ_pos to be unlinked}
+    def destroy(self, cand_pos_to_discard, CAND, OCC):#cand_pos_to_discard is a dict{cand_id: set of tuple of occ_pos to be unlinked}
         for old_cand_id in cand_pos_to_discard:
             for old_cand_pos in cand_pos_to_discard[old_cand_id]:
-                CAND[old_cand_id]._unlink(old_cand_pos)
-
+                try:
+                    CAND[old_cand_id]._unlink(old_cand_pos)
+                except KeyError:
+                    print('STRANGE', old_cand_id, old_cand_pos)
+                    for occ_pos in old_cand_pos:
+                        OCC[occ_pos]._recession(CAND)
 
     def build(self, OCC, CAND):
         cand_pos_to_discard = {}
@@ -277,7 +280,7 @@ class Candidat:
                 if old_cand:#in case of a nucleus no cand is to be discarded because is only a twords (does not imply cand growth), so oldcandid is None
                     old_cand_id, old_cand_pos = old_cand
                     cand_pos_to_discard.setdefault(old_cand_id, set()).add(old_cand_pos)
-        self.destroy(cand_pos_to_discard, CAND)
+        self.destroy(cand_pos_to_discard, CAND, OCC)
 
 
 class Nucleus(Candidat):
