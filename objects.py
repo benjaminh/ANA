@@ -227,13 +227,13 @@ class Candidat:
         expre_where = {}
         expre_what = {}
 
-        for positions in self.where:#position is a tuple of occurrence positions for the cand. ex: ((15,16,17), (119,120,121), (185,186,187))
+        for positions in self.where:#positions is a tuple of occurrence positions for the cand. ex: self.where = {(15,16,17), (119,120,121), (185,186,187)}
             cand_posmin = min(positions)
-            cand_posmax = max(positions)#get the extrems tails of the cand position in the tuple. ex    17           121            187
+            cand_posmax = max(positions)#get the extrems tails of the cand position in the tuple. ex                17           121            187
             i = 0
             tword_inside_count = 0
             linkword = False
-            while tword_inside_count<2:
+            while tword_inside_count<2 and i < 5:#limit on i to avoid connecting 2 cands separated by many emptywords
                 i += 1
                 try:
                     if OCC[cand_posmax+i].stopword:
@@ -243,7 +243,7 @@ class Candidat:
                     elif OCC[cand_posmax+i].cand:# and linkword == True:
                         couple = (self.id, OCC[cand_posmax+i].cand)# tuple(cand_id, nextcand_id)
                         expre_pos = tuple(range(cand_posmin, max(OCC[cand_posmax+i].cand_pos)+1))# match till the the end tail of the next_cand; ()+1 is for the range behaviour)
-                        expre_where.setdefault(couple, set()).add(positions)
+                        expre_where.setdefault(couple, set()).add(positions)#add the set of position of the initial cand building the expre
                         expre_what[positions] = expre_pos
                         break
                     elif OCC[cand_posmax+i].tword:
@@ -267,9 +267,14 @@ class Candidat:
                 try:
                     CAND[old_cand_id]._unlink(old_cand_pos)
                 except KeyError:
-                    print('STRANGE', old_cand_id, old_cand_pos)
+                    print('STRANGE')
+                    print('not found', old_cand_id, old_cand_pos)
+                    print('newcand', self.id)
+                    print('newcand_pos', self.where)
                     for occ_pos in old_cand_pos:
-                        OCC[occ_pos]._recession(CAND)
+                        print(OCC[occ_pos].long_shape, occ_pos)
+                        print('cand_pos',OCC[occ_pos].cand_pos)
+                        print('hist',OCC[occ_pos].hist)
 
     def build(self, OCC, CAND):
         cand_pos_to_discard = {}
@@ -280,6 +285,7 @@ class Candidat:
                 if old_cand:#in case of a nucleus no cand is to be discarded because is only a twords (does not imply cand growth), so oldcandid is None
                     old_cand_id, old_cand_pos = old_cand
                     cand_pos_to_discard.setdefault(old_cand_id, set()).add(old_cand_pos)
+
         self.destroy(cand_pos_to_discard, CAND, OCC)
 
 

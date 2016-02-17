@@ -101,10 +101,13 @@ def build_bootdict(bootstrap_file_path):
                 bootstrap[i] = objects.Occurrence(long_shape = cand, cand = 0, cand_pos = set(), date = False, linkword = 0, tword = True)
         return bootstrap
 
-def build_wordset(wordlist_file_path):
-    with open(wordlist_file_path, 'r', encoding='utf8') as wordlistfile:
-        lines = wordlistfile.readlines()
-        return set([re.sub(r'\n', '', s) for s in lines])
+def build_wordset(*args):
+    wordsset = set()
+    for wordlist_file_path in args:
+        with open(wordlist_file_path, 'r', encoding='utf8') as wordlistfile:
+            lines = wordlistfile.readlines()
+            wordsset |= (set([re.sub(r'\n', '', s) for s in lines]))
+    return wordsset
 
 def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1, d:1, au:2, aux:2, en:3}
     with open(linkwords_file_path, 'r', encoding = 'utf8') as linkwordsfile:
@@ -119,12 +122,12 @@ def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1,
 
 
 #jsonpagespos_path is to store the position of the markers spliting the original pages in the concatenated txt4ana.txt
-def build_OCC(txt4ana, stopwords_file_path, emptywords_file_path, linkwords_file_path, bootstrap_file_path, working_directory):
+def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptywords_file_path, extra_emptywords_file_path, linkwords_file_path, bootstrap_file_path, working_directory):
     bootstrap = build_bootdict(bootstrap_file_path)
     occ2boot = {}
     propernouns = {}
-    emptywords = build_wordset(emptywords_file_path)
-    stopwords = build_wordset(stopwords_file_path)
+    emptywords = build_wordset(emptywords_file_path, extra_emptywords_file_path)
+    stopwords = build_wordset(stopwords_file_path, extra_stopwords_file_path)
     linkwords = build_linkdict(linkwords_file_path)
     Rsplitermark = re.compile(r'wxcv[\d|_]*wxcv')#TODO build a splitermark regex
     Rwordsinline = re.compile(r'(\w+[’|\']?|[.,!?;])(?siu)')
@@ -143,7 +146,7 @@ def build_OCC(txt4ana, stopwords_file_path, emptywords_file_path, linkwords_file
             for word in words:
                 index += 1
                 matchbootstrap = False
-                elif Rsplitermark.match(word):
+                if Rsplitermark.match(word):
                     #TODO page_id = get the id of the splitmarker, or build it
                     if page_id:#the first markers of the page will have no "last used page_id"
                         pages_pos[page_id] += (index,)#last used page_id is still valid and close the last

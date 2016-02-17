@@ -39,6 +39,7 @@ def nucleus_step(OCC, CAND, nucleus_threshold):
 
 def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
     CAND2build = {}# storing the CAND to be created while looping in the dict
+    done = set()# to avoid expre conflicts for cases like A de B de C -> A de B and B de C exist; we have to choose!
     for cand_id in CAND:
         expawin = CAND[cand_id].expa_window(OCC)# {t_word_pos: tuple_cand_positions)
         expre_where, expre_what = CAND[cand_id].expre_window(OCC)
@@ -50,7 +51,7 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
         if expawinmerged:
             for expa_twords_eq in expawinmerged:
                 if len(expa_twords_eq) > expansion_threshold:
-                    forbid.union(set(expawinmerged[expa_twords_eq]))# forbid = set(tuple_cand_positions)
+                    forbid.update(set(expawinmerged[expa_twords_eq]))# forbid = set(tuple_cand_positions)
                     #Build the cand expa (inside or not) by the way...
                     where = set()#where is set of tuple of expa_positions
                     for valid_tword in expa_twords_eq:# for t_word in the tuple of equivalent t_words
@@ -61,17 +62,30 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
         exprewin = {}
         if expre_where:
             for couple in expre_where:
-                if len(expre_where[couple]) > expression_threshold:# set of tuples(cand_positions). the other, not long enough are rejected
+                if len(expre_where[couple]) > expression_threshold:# set of tuples(firstcand_positions). the shorter, not long enough are rejected
                     for cand_positions in expre_where[couple]:#for each tuple of cand_positions
                         if cand_positions not in forbid:
                             exprewin.setdefault(couple, set()).add(expre_what[cand_positions])#retrieve the whole expre pos from the single first cand_pos
-            #third : building the new expre, starting with the less occurring ones. Managing conflicts for cases like A de B de C
+                            #exprewin[couple] is a set of tuple(occ_pos of the entire expre) -> spread over 2 cands and the inbetween -> contain the future cand.where
+            #third : building the new expre, starting with the less occurring ones.
+            # Managing conflicts for cases like A de B de C -> A de B and B de C exist; we have to choose!
             for couple in sorted(exprewin, key=lambda couple: len(exprewin[couple])):#the less occuring expre first
-             #FIXME ordre de traitement des expre et gérer les conflicts:
-             # d'abord ceux qui ont le moins d'occurrence, dans la limite de ne pas empecher la formation de ceux qui en ont le plus!
+            #FIXME ordre de traitement des expre et gérer les conflicts:
+            #l'ideal serait: d'abord ceux qui ont le moins d'occurrence, dans la limite de ne pas empecher la formation de ceux qui en ont le plus!
+            #pour l'instant, on commence par les moins occurrent et tant pis s'il n'en reste pas pour construire les plus occurrents (peu probalble, mais ça serait dommage!)
                 if len(exprewin[couple]) > expression_threshold:
-                    next_id = max(CAND) + 1 + len(CAND2build)
-                    CAND2build[next_id] = (next_id, exprewin[couple])# new CAND to be created (stored while looping in the dict)
+                    all_expre_occ = [pos for expre_pos in exprewin[couple] for pos in expre_pos]# expre pos is a tuple of occ pos
+                    if set(all_expre_occ).isdisjoint(done):
+                        done.update(set(all_expre_occ))
+                        next_id = max(CAND) + 1 + len(CAND2build)
+                        CAND2build[next_id] = (next_id, exprewin[couple])# new CAND to be created (stored while looping in the dict)
+                    else:
+                        allpos = ''
+                        for expre_pos in exprewin[couple]:
+                            for pos in expre_pos:
+                                allpos += OCC[pos].long_shape
+                            print('REFUSED: ', allpos)
+                            break
     for idi, value in CAND2build.items():#building all the new cands
         CAND[idi] = objects.Candidat(idi = value[0], where = value[1])
         CAND[idi].build(OCC, CAND)
