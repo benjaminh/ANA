@@ -30,7 +30,7 @@ changement
 accomplissement
 question
 questions
-longs 
+longs
 long
 longue
 longues

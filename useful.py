@@ -202,3 +202,27 @@ def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptyword
 #TODO function to build a long shape for the cand at the end
 #maybe some option for this shape building?
 #maybe the user can choose one among others
+def cand_final_shapes(CAND, OCC):
+    #dict_candshape is a dict {key: cand_id ; value: {"max_occ_shape": "str"; "shortest_shape": "str"; DBpediashape }
+    dict_candshape = {}
+    for cand_id in CAND:
+        shortest_shape = ''.join([str(x) for x in range(50)])
+        max_occ_shape = {}
+        for cand_pos in CAND[cand_id].where:
+            shape = ' '.join([OCC[occ_pos].long_shape for occ_pos in cand_pos])
+            max_occ_shape.setdefault(shape, 0)
+            max_occ_shape[shape] += 1
+            if len(shortest_shape) > len(shape):
+                shortest_shape = shape
+        for shape in sorted(max_occ_shape, key=max_occ_shape.get, reverse = True):
+            max_occS = shape
+            break
+        dict_candshape[cand_id] = {"max_occ_shape": max_occS, "shortest_shape": shortest_shape, "DBpediashape": None }
+    return dict_candshape
+
+def write_output(CAND, OCC):
+    dict_candshape = cand_final_shapes(CAND, OCC)
+    with open('output/keywords.csv', 'w') as keyfile:
+        keyfile.write('occurrences, max occurring shape, shortest shape\n')
+        for idi in CAND:
+            keyfile.write(str(len(CAND[idi].where))+','+ dict_candshape[idi]["max_occ_shape"]+','+dict_candshape[idi]["shortest_shape"]+'\n')

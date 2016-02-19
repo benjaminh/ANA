@@ -58,11 +58,12 @@ logging.info('Started at' + starting)
 
 logging.info('### building the OCC dict ###')
 OCC, CAND = useful.build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptywords_file_path, extra_emptywords_file_path, linkwords_file_path, bootstrap_file_path, match_propernouns, working_directory)
-
+print('candidats trouvés à l\'amorce:', len(CAND))
 
 #PROCESS CALL
 stop = False
 nb_passe = 0
+old_len_diff = 0
 while not stop:
     nb_passe += 1
     global_steps -= 1
@@ -75,11 +76,14 @@ while not stop:
     logging.info('\n### RECESSION ### step '+ str(nb_passe) + '\n\n')
     extract.recession_step(OCC, CAND, recession_threshold)
     diff = len(CAND)-old_len_cands
-    print('Variation du nombre de candidats :', diff)
+    print('\n\n###### step '+ str(nb_passe))
+    print('Nombre de candidats nouvellement trouvés :', diff)
+    print('Nombre de candidats dont la taille a été modifiée', max(CAND) - len(CAND) - old_len_diff)
+    old_len_diff = max(CAND) - len(CAND)
     #stop conditions:
     if automaticsteps and diff == 0:
         automaticsteps = False #out ouf this loop next time, for 2 more rounds
-        if time.clock() < 100:#if it is a short process (less than 100 sec)
+        if time.clock() < 30:#if it is a short process (less than 30 sec)
             global_steps = 2#run 2 more times after having stoped discoverring cands. (-> building long xpre and xpa?)
         elif time.clock() < 1000:
             global_step = 1# run one more time after having stoped discoverring cands.
@@ -89,16 +93,7 @@ while not stop:
         stop = True
 
 #WRITE OUTPUT
+print('candidats trouvés :', len(CAND))
 ending = str(time.clock())
 logging.info('Ended at' + ending)
-with open('output/keywords.csv', 'w') as keyfile:
-    for idi in CAND:
-        shape = ''
-        for occ_pos in CAND[idi].where:
-            for e in occ_pos:
-                shape += OCC[e].long_shape
-                shape += ' '
-            break
-        if shape == '':
-            print(idi)
-        keyfile.write(str(len(CAND[idi].where))+','+ shape+'\n')
+useful.write_output(CAND, OCC)

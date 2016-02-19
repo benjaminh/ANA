@@ -81,7 +81,10 @@ class Occurrence:
     def set_shapes(self):
         if not self.date:
             # self.set_ascii_longshape()
-            ascii_shape = [rm_accent[caract] if caract in rm_accent else caract for caract in self.long_shape.lower()] #if charac in the dict of accentuated charact, then replace it by its non-accentuated match
+            ascii_shape = ''.join([rm_accent[caract] if caract in rm_accent else caract for caract in self.long_shape.lower()]) #if charac in the dict of accentuated charact, then replace it by its non-accentuated match
+            ascii_shape = re.sub(r's$', '', ascii_shape)#remove final s of the word
+            ascii_shape = re.sub(r'e$', '', ascii_shape)#remove final e
+            ascii_shape = re.sub(r'nt$', '', ascii_shape)#remove final nt
             self.ascii_shape = ''.join(ascii_shape)
             short_shape = [caract for caract in self.ascii_shape if (Rconsonne.match(caract))] #the 3 first charactere from the ascii shape
             short_shape = short_shape[:3]
