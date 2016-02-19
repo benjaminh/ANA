@@ -75,7 +75,7 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
             #pour l'instant, on commence par les moins occurrent et tant pis s'il n'en reste pas pour construire les plus occurrents (peu probalble, mais ça serait dommage!)
                 if len(exprewin[couple]) > expression_threshold:
                     all_expre_occ = [pos for expre_pos in exprewin[couple] for pos in expre_pos]# expre pos is a tuple of occ pos
-                    if set(all_expre_occ).isdisjoint(done):
+                    if set(all_expre_occ).isdisjoint(done):#if none of the occurrence composing th expre has allready been seen this step (in case A B C) will try to build AB and BC. This is to avoid
                         done.update(set(all_expre_occ))
                         next_id = max(CAND) + 1 + len(CAND2build)
                         CAND2build[next_id] = (next_id, exprewin[couple])# new CAND to be created (stored while looping in the dict)
@@ -84,7 +84,6 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
                         for expre_pos in exprewin[couple]:
                             for pos in expre_pos:
                                 allpos += OCC[pos].long_shape
-                            print('REFUSED: ', allpos)
                             break
     for idi, value in CAND2build.items():#building all the new cands
         CAND[idi] = objects.Candidat(idi = value[0], where = value[1])

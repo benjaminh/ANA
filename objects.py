@@ -298,16 +298,32 @@ class Nucleus(Candidat):
 
     def __init__(self, **kwargs):
         super(Nucleus, self).__init__(**kwargs)
+        self.occ_represent = set()# this set contains one or several occ_pos, reprensenting all the different shape of the nuc.
+        self.shape_represent = set()#this is a set of occ shape reprensenting all the different shape of the nuc. Not to rebuild the self.occ_represent set on each update
+
+    def _representatives(self, OCC):
+        shape_represent = set()
+        for where in self.where:# where is a tuple of a single integer eg: (45,) -> where[0] get an occ_pos
+            if OCC[where[0]].long_shape not in self.shape_represent:
+                self.shape_represent.add(OCC[where[0]].long_shape)
+                self.occ_represent.add(where[0])
+
+    def _update_representatives(self, occ_pos, OCC):
+        if OCC[occ_pos].long_shape not in self.shape_represent:
+            self.shape_represent.add(OCC[occ_pos].long_shape)
+            self.occ_represent.add(occ_pos)
 
     def _search_all_twords(self, OCC):
-        for occur in OCC:
-            if OCC[occur].tword:
+        for occ_pos in OCC:
+            if OCC[occ_pos].tword:
                 #TODO evaluate if this is too slow and not a good benefit for word spoting
-                for where in self.where:#try to match any of the shapes that allready matched
-                    if occur not in self.where and OCC[occur].soft_equality(OCC[where[0]]):# where is a tuple of a single integer eg: (45,)
-                        self.where.add((occur,))#add the position (as a tuple of 1 integer) of the occurrence in soft equality
+                for occ_pos_repr in self.occ_represent:#try to match any of the shapes that allready matched
+                    if (occ_pos,) not in self.where and OCC[occ_pos].soft_equality(OCC[occ_pos_repr]):# where is a tuple of a single integer eg: (45,) -> where[0] get an occ_pos
+                        self.where.add((occ_pos,))#add the position (as a tuple of 1 integer) of the occurrence in soft equality
+                        self._update_representatives(occ_pos_repr, OCC)
                         break
 
     def buildnuc(self, OCC, CAND):
+        self._representatives(OCC)
         self._search_all_twords(OCC)#search for all the occurrences of this nex nucleus in the whole text
         self.build(OCC, CAND)#transform the twords in nucleus

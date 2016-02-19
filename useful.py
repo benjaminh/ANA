@@ -122,7 +122,7 @@ def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1,
 
 
 #jsonpagespos_path is to store the position of the markers spliting the original pages in the concatenated txt4ana.txt
-def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptywords_file_path, extra_emptywords_file_path, linkwords_file_path, bootstrap_file_path, working_directory):
+def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptywords_file_path, extra_emptywords_file_path, linkwords_file_path, bootstrap_file_path, match_propernouns, working_directory):
     bootstrap = build_bootdict(bootstrap_file_path)
     occ2boot = {}
     propernouns = {}
@@ -184,11 +184,12 @@ def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptyword
                 next_id = 1
             CAND[next_id] = objects.Candidat(idi = next_id, where = occ2boot[indice])
             CAND[next_id].build(OCC, CAND)
-        for propernoun in propernouns:
-            if len(propernouns[propernoun])>1:
-                next_id = max(CAND)+1
-                CAND[next_id] = objects.Candidat(idi = next_id, where = propernouns[propernoun])
-                CAND[next_id].build(OCC, CAND)
+        if match_propernouns:
+            for propernoun in propernouns:
+                if len(propernouns[propernoun])>1:#if more than one occurrence of the propernoun has been found
+                    next_id = max(CAND)+1
+                    CAND[next_id] = objects.Candidat(idi = next_id, where = propernouns[propernoun])
+                    CAND[next_id].build(OCC, CAND)
         #writing a file mapping the concatenated file with their start_po end_pos in the OCC dict
         jsonpagespos_path = os.path.join(working_directory, 'intra', 'pages_pos.json')
         with open(jsonpagespos_path, 'w') as jsonpages:#TODO ok pour un JSON file? il fera le lien entre le mots clef et les noeuds neo4j?
